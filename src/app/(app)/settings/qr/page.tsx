@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Printer, QrCode, UtensilsCrossed } from "lucide-react";
@@ -21,9 +21,10 @@ export default function TableQrPrintPage() {
     [zones]
   );
 
-  const origin = typeof window === "undefined" ? "" : window.location.origin;
+  const [origin, setOrigin] = useState(process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "");
+  useEffect(() => { if (!origin) setOrigin(window.location.origin); }, [origin]);
 
-  if (tablesLoading || settingsLoading || !settings) {
+  if (tablesLoading || settingsLoading || !settings || !origin) {
     return <div className="page-stack"><PageHeader title="QR de mesas"/><Skeleton className="h-[600px] rounded-xl"/></div>;
   }
 

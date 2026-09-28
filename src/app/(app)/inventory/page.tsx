@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/client-api";
 import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-  EmptyState, Input, NativeSelect, PageHeader, Skeleton, Table, TableBody, TableCell,
+  EmptyState, Input, NativeSelect, Pagination, PageHeader, Skeleton, Table, TableBody, TableCell,
   TableHead, TableHeader, TableRow, Textarea
 } from "@/components/ui";
 
@@ -20,6 +20,7 @@ export default function InventoryPage() {
   const [quantity, setQuantity] = useState(0);
   const [type, setType] = useState("PURCHASE");
   const [reason, setReason] = useState("");
+  const [page, setPage] = useState(1);
 
   const { data = [], isLoading } = useQuery({ queryKey: ["inventory"], queryFn: () => api<Ingredient[]>("/api/inventory") });
   const mutation = useMutation({
@@ -30,7 +31,11 @@ export default function InventoryPage() {
 
   const low = data.filter(item => item.minStock && Number(item.stock) <= Number(item.minStock));
   const value = data.reduce((sum, item) => sum + Number(item.stock) * Number(item.averageCost), 0);
-  const visible = data.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = data.filter(item => item.name.toLowerCase().includes(search.toLowerCase()));
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   if (isLoading) return <div><PageHeader title="Inventario"/><Skeleton className="h-[500px] rounded-xl"/></div>;
 
@@ -42,7 +47,7 @@ export default function InventoryPage() {
       <article><span className="green"><PackageOpen/></span><div><small>VALOR ESTIMADO</small><strong>S/ {value.toFixed(2)}</strong></div></article>
     </section>
 
-    <div className="search-field inventory-search"><Search/><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar ingrediente..."/></div>
+    <div className="search-field inventory-search"><Search/><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar ingrediente..."/></div>
 
     <section className="panel overflow-hidden">
       <Table>
@@ -71,6 +76,7 @@ export default function InventoryPage() {
           })}
         </TableBody>
       </Table>
+      <Pagination className="px-4" page={safePage} totalPages={totalPages} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage}/>
     </section>
 
     {!data.length && <EmptyState icon={<Boxes/>} title="Inventario vacío" detail="Agrega ingredientes para comenzar el control."/>}

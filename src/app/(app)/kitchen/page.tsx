@@ -15,7 +15,15 @@ function timerLabel(minutes: number, tick: number) { const seconds = Math.floor(
 
 export default function KitchenPage() {
   const client = useQueryClient(); const [station, setStation] = useState("all"); const [tick, setTick] = useState(0); const [sound, setSound] = useState(true); const previousCount = useRef<number | undefined>(undefined);
-  const { data: orders = [], isLoading } = useQuery({ queryKey: ["orders", "kitchen"], queryFn: () => api<Order[]>("/api/orders?view=kitchen") });
+  const { data: orders = [], isLoading } = useQuery({
+    queryKey: ["orders", "kitchen"],
+    queryFn: () => api<Order[]>("/api/orders?view=kitchen"),
+    refetchInterval: 2_000,
+    refetchIntervalInBackground: true,
+    refetchOnReconnect: "always",
+    refetchOnWindowFocus: "always",
+    staleTime: 0
+  });
   useEffect(() => { const interval = setInterval(() => setTick(Date.now()), 1000); return () => clearInterval(interval); }, []);
   useEffect(() => { if (previousCount.current !== undefined && orders.length > previousCount.current && sound) { const context = new AudioContext(); const oscillator = context.createOscillator(); const gain = context.createGain(); oscillator.connect(gain); gain.connect(context.destination); oscillator.frequency.value = 660; gain.gain.value = 0.08; oscillator.start(); oscillator.stop(context.currentTime + 0.16); } previousCount.current = orders.length; }, [orders.length, sound]);
   const stations = useMemo(() => [...new Map(orders.flatMap(order => order.tickets.map(ticket => [ticket.station.id, ticket.station.name] as const))).entries()], [orders]);

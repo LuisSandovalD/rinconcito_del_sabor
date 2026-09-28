@@ -4,15 +4,17 @@ import { LoaderCircle } from "lucide-react";
 import type { ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "default" | "secondary" | "outline" | "ghost" | "destructive";
+type Variant = "default" | "primary" | "secondary" | "outline" | "ghost" | "destructive" | "danger";
 type Size = "default" | "sm" | "lg" | "icon";
 
 const variantClasses: Record<Variant, string> = {
   default: "bg-foreground text-background hover:opacity-90",
-  secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+  primary: "bg-foreground text-background hover:opacity-90",
+  secondary: "border border-border bg-background hover:bg-accent hover:text-accent-foreground",
   outline: "border border-border bg-background hover:bg-accent hover:text-accent-foreground",
   ghost: "hover:bg-accent hover:text-accent-foreground",
-  destructive: "bg-destructive text-white hover:opacity-90"
+  destructive: "bg-destructive text-white hover:opacity-90",
+  danger: "bg-destructive text-white hover:opacity-90"
 };
 
 const sizeClasses: Record<Size, string> = {

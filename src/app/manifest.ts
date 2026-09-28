@@ -1,0 +1,2 @@
+import type { MetadataRoute } from "next";
+export default function manifest(): MetadataRoute.Manifest { return { name: "Rinconcito del Sabor", short_name: "Rinconcito", description: "Operación integral del restaurante", start_url: "/", display: "standalone", background_color: "#f4f6f3", theme_color: "#173d2c", orientation: "any", icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml" }] }; }

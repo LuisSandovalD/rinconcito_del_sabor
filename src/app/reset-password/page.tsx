@@ -1,0 +1,9 @@
+"use client";
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Check, LockKeyhole, UtensilsCrossed } from "lucide-react";
+import { toast } from "sonner";
+import { api } from "@/lib/client-api";
+import { Button, Input } from "@/components/ui";
+export default function ResetPasswordPage() { return <Suspense fallback={<main className="auth-simple"><section>Cargando enlace seguro...</section></main>}><ResetPasswordForm/></Suspense>; }
+function ResetPasswordForm() { const token = useSearchParams().get("token") ?? ""; const [password, setPassword] = useState(""); const [done, setDone] = useState(false); const [loading, setLoading] = useState(false); const submit = async (e: React.FormEvent) => { e.preventDefault(); setLoading(true); try { await api("/api/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }); setDone(true); } catch (error) { toast.error(error instanceof Error ? error.message : "No pudimos cambiar la contraseña."); } finally { setLoading(false); } }; return <main className="auth-simple"><section><div className="auth-logo"><UtensilsCrossed/></div>{done ? <><Check className="auth-success"/><h1>Contraseña actualizada</h1><p>Ya puedes ingresar con tu nueva contraseña. Las sesiones anteriores fueron cerradas.</p><a className="button button-primary" href="/login">Ingresar al sistema</a></> : <form onSubmit={submit}><p className="eyebrow">SEGURIDAD</p><h1>Crea una nueva contraseña</h1><p>Usa al menos 12 caracteres, una mayúscula y un número.</p><label>Nueva contraseña<div className="input-icon"><LockKeyhole/><Input type="password" value={password} onChange={e => setPassword(e.target.value)} minLength={12} required autoFocus/></div></label><Button type="submit" loading={loading} disabled={!token}>Guardar nueva contraseña</Button></form>}</section></main>; }

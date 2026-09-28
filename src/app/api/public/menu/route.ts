@@ -1,0 +1,3 @@
+import { handleApiError, ok } from "@/lib/api";
+import { db } from "@/lib/db";
+export async function GET() { try { const [settings, categories] = await Promise.all([db.restaurantSettings.findUniqueOrThrow({ where: { id: "singleton" } }), db.category.findMany({ where: { active: true }, orderBy: { sortOrder: "asc" }, include: { products: { where: { active: true }, orderBy: [{ featured: "desc" }, { name: "asc" }] } } })]); return ok({ settings: { tradeName: settings.tradeName, address: settings.address, phone: settings.phone, logoUrl: settings.logoUrl, orderingEnabled: settings.qrOrderingEnabled }, categories }); } catch (error) { return handleApiError(error); } }

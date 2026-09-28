@@ -979,6 +979,35 @@ label { font-size: 13px; font-weight: 700; color: var(--text); display: grid; ga
 
 [data-slot="dialog-portal"] {
   z-index: 2147483000 !important;
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f6f6f6;
+  --text: #090909;
+  --muted: #707070;
+  --line: #ececec;
+  --green: #181818;
+  --orange: #f97316;
+  --background: #ffffff;
+  --foreground: #090909;
+  --border: #ececec;
+  --input-ui: #e8e8e8;
+  --ring: #f97316;
+}
+
+.dark [data-slot="dialog-portal"] {
+  --bg: #000000;
+  --surface: #080808;
+  --surface-2: #111111;
+  --text: #fafafa;
+  --muted: #a1a1a1;
+  --line: #1c1c1c;
+  --green: #fafafa;
+  --orange: #fb7c24;
+  --background: #080808;
+  --foreground: #fafafa;
+  --border: #222222;
+  --input-ui: #282828;
+  --ring: #fb7c24;
 }
 
 [data-slot="dialog-content"] {

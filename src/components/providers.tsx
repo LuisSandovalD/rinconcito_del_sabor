@@ -21,7 +21,7 @@ const queryClient = new QueryClient({
 
 function RealtimeBridge({ children }: { children: React.ReactNode }) {
   const client = useQueryClient();
-  const [connection, setConnection] = useState<ConnectionState>(typeof navigator !== "undefined" && !navigator.onLine ? "offline" : "reconnecting");
+  const [connection, setConnection] = useState<ConnectionState>("reconnecting");
 
   useEffect(() => {
     let source: EventSource | null = null;

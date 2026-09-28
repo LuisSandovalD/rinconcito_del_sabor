@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma generate --config=prisma.config.ts && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -18,8 +18,9 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "tsx prisma/seed.ts",
-    "vercel-build": "prisma generate --config=prisma.config.ts && prisma migrate deploy --config=prisma.config.ts && next build",
-    "prisma:migrate:deploy": "prisma migrate deploy --config=prisma.config.ts"
+    "vercel-build": "node scripts/vercel-build.mjs",
+    "prisma:migrate:deploy": "prisma migrate deploy --config=prisma.config.ts",
+    "build:next": "next build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

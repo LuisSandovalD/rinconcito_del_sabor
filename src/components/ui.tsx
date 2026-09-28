@@ -43,3 +43,5 @@ export function EmptyState({ icon, title, detail }: { icon: ReactNode; title: st
 export function PageHeader({ eyebrow, title, description, action }: { eyebrow?: string; title: string; description?: string; action?: ReactNode }) {
   return <header data-slot="page-header" className={cn("page-header")}><div>{eyebrow && <p className="eyebrow">{eyebrow}</p>}<h1>{title}</h1>{description && <p>{description}</p>}</div>{action}</header>;
 }
+
+export { Pagination } from "@/components/ui/pagination";

@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { api } from "@/lib/client-api";
 import {
   Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-  Input, NativeSelect, PageHeader, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+  Input, NativeSelect, Pagination, PageHeader, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui";
 
 type User = { id: string; email: string; firstName: string; lastName: string; status: "ACTIVE" | "DISABLED" | "LOCKED"; lastLoginAt?: string; roles: Array<{ role: { id: string; name: string } }> };
@@ -17,6 +17,7 @@ export default function UsersPage() {
   const client = useQueryClient();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const { data, isLoading } = useQuery({ queryKey: ["users"], queryFn: () => api<{ users: User[]; roles: Role[] }>("/api/users") });
   const status = useMutation({
     mutationFn: ({ id, value }: { id: string; value: User["status"] }) => api(`/api/users/${id}`, { method: "PATCH", body: JSON.stringify({ status: value }) }),
@@ -25,7 +26,11 @@ export default function UsersPage() {
   });
 
   if (isLoading || !data) return <Skeleton className="h-[600px] rounded-xl"/>;
-  const users = data.users.filter(user => `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(search.toLowerCase()));
+  const filteredUsers = data.users.filter(user => `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(search.toLowerCase()));
+  const pageSize = 8;
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const users = filteredUsers.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return <div className="page-stack">
     <PageHeader eyebrow="EQUIPO Y ACCESO" title="Usuarios y roles" description="Cada trabajador ve solo las herramientas que necesita." action={<Button onClick={() => setOpen(true)}><Plus/> Nuevo usuario</Button>}/>
@@ -36,7 +41,7 @@ export default function UsersPage() {
       <article><span className="warn"><UserRound/></span><div><small>ROLES</small><strong>{data.roles.length}</strong></div></article>
     </section>
 
-    <div className="search-field inventory-search"><Search/><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar trabajador..."/></div>
+    <div className="search-field inventory-search"><Search/><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar trabajador..."/></div>
 
     <section className="panel overflow-hidden">
       <Table>
@@ -57,6 +62,7 @@ export default function UsersPage() {
           </TableRow>)}
         </TableBody>
       </Table>
+      <Pagination className="px-4" page={safePage} totalPages={totalPages} totalItems={filteredUsers.length} pageSize={pageSize} onPageChange={setPage}/>
     </section>
 
     <CreateUser open={open} roles={data.roles} onClose={() => setOpen(false)} onCreated={() => { setOpen(false); void client.invalidateQueries({ queryKey: ["users"] }); }}/>

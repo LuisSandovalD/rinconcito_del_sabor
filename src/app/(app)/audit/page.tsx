@@ -5,7 +5,7 @@ import { Archive, Clock3, Search, ShieldCheck, UserRound } from "lucide-react";
 import { useState } from "react";
 import { api } from "@/lib/client-api";
 import {
-  Alert, AlertDescription, AlertTitle, Badge, EmptyState, Input, PageHeader, Skeleton,
+  Alert, AlertDescription, AlertTitle, Badge, EmptyState, Input, Pagination, PageHeader, Skeleton,
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow
 } from "@/components/ui";
 
@@ -13,11 +13,16 @@ type Log = { id: string; action: string; module: string; entity?: string; entity
 
 export default function AuditPage() {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const { data = [], isLoading } = useQuery({ queryKey: ["audit"], queryFn: () => api<Log[]>("/api/audit") });
 
   if (isLoading) return <Skeleton className="h-[600px] rounded-xl"/>;
 
-  const visible = data.filter(log => `${log.action} ${log.module} ${log.user?.firstName ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = data.filter(log => `${log.action} ${log.module} ${log.user?.firstName ?? ""}`.toLowerCase().includes(search.toLowerCase()));
+  const pageSize = 12;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
   return <div className="page-stack">
     <PageHeader eyebrow="TRAZABILIDAD" title="Auditoría" description="Cada operación sensible, registrada con su responsable."/>
@@ -28,7 +33,7 @@ export default function AuditPage() {
       <AlertDescription>Los eventos se conservan para trazabilidad y control interno.</AlertDescription>
     </Alert>
 
-    <div className="search-field audit-search"><Search/><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar acción, módulo o usuario..."/></div>
+    <div className="search-field audit-search"><Search/><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar acción, módulo o usuario..."/></div>
 
     <section className="panel overflow-hidden">
       <Table>
@@ -51,6 +56,7 @@ export default function AuditPage() {
           </TableRow>)}
         </TableBody>
       </Table>
+      <Pagination className="px-4" page={safePage} totalPages={totalPages} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage}/>
     </section>
 
     {!visible.length && <EmptyState icon={<Archive/>} title="Sin eventos" detail="Las operaciones sensibles aparecerán aquí."/>}

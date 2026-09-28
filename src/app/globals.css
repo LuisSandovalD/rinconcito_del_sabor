@@ -1038,3 +1038,130 @@ label { font-size: 13px; font-weight: 700; color: var(--text); display: grid; ga
     background: #000000;
   }
 }
+
+
+/* ===== 4X4 CM QR PDF PREVIEW ===== */
+.qr-pdf-info {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:14px 16px;
+  border-radius:12px;
+  background:var(--surface-2);
+  color:var(--text);
+}
+.qr-pdf-info > svg {
+  width:22px;
+  height:22px;
+  color:var(--orange);
+  flex:0 0 auto;
+}
+.qr-pdf-info > div {
+  display:grid;
+  gap:2px;
+}
+.qr-pdf-info strong {
+  font-size:13px;
+}
+.qr-pdf-info span {
+  color:var(--muted);
+  font-size:11px;
+}
+
+.qr-label-preview-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:16px;
+}
+.qr-label-preview {
+  position:relative;
+  aspect-ratio:1/1;
+  overflow:hidden;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  color:#090909;
+  padding:14px;
+  box-shadow:0 1px 8px rgba(0,0,0,.04);
+}
+.qr-label-head {
+  display:flex;
+  align-items:center;
+  gap:9px;
+}
+.qr-label-mark {
+  width:32px;
+  height:32px;
+  display:grid;
+  place-items:center;
+  border-radius:9px;
+  background:var(--orange);
+  color:white;
+}
+.qr-label-mark svg {
+  width:16px;
+  height:16px;
+}
+.qr-label-head > div {
+  display:grid;
+  min-width:0;
+}
+.qr-label-head strong {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-size:13px;
+}
+.qr-label-head small {
+  color:#777;
+  font-size:9px;
+}
+.qr-label-content {
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-items:center;
+  gap:8px;
+  margin-top:12px;
+}
+.qr-label-content > div {
+  display:grid;
+}
+.qr-label-content small {
+  color:var(--orange);
+  font-size:9px;
+  letter-spacing:.12em;
+  font-weight:800;
+}
+.qr-label-content strong {
+  font-size:34px;
+  line-height:1;
+}
+.qr-label-preview footer {
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:12px;
+  display:grid;
+  gap:2px;
+}
+.qr-label-preview footer strong {
+  font-size:10px;
+}
+.qr-label-preview footer span {
+  color:#777;
+  font-size:8px;
+}
+.qr-hidden-canvas {
+  position:fixed;
+  left:-10000px;
+  top:-10000px;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  pointer-events:none;
+}
+.dark .qr-label-preview {
+  background:#fff;
+  color:#090909;
+  border-color:#222;
+}

@@ -1,6 +1,6 @@
 "use client";
 /* Public product media uses Cloudinary responsive transformations. */
-/* eslint-disable @next/next/no-img-element, @typescript-eslint/no-unused-vars */
+/* eslint-disable @next/next/no-img-element */
 import { useQuery } from "@tanstack/react-query";
 import { Clock3, MapPin, Phone, Search, UtensilsCrossed } from "lucide-react";
 import { use, useState } from "react";

@@ -749,3 +749,263 @@ label { font-size: 13px; font-weight: 700; color: var(--text); display: grid; ga
   .qr-print-url,
   .qr-print-table span { color: #555 !important; }
 }
+
+
+/* ===== BLACK / WHITE / ORANGE UI SYSTEM ===== */
+/* Final visual layer: neutral white/black base with orange interaction accents. */
+.app-layout {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f6f6f6;
+  --text: #090909;
+  --muted: #707070;
+  --line: #ececec;
+  --green: #181818;
+  --green-2: #000000;
+  --mint: #fff3eb;
+  --orange: #f97316;
+  --orange-soft: #fff3e9;
+  --ring: #f97316;
+  background: #ffffff;
+}
+
+.dark .app-layout {
+  --bg: #000000;
+  --surface: #080808;
+  --surface-2: #111111;
+  --text: #fafafa;
+  --muted: #a1a1a1;
+  --line: #1c1c1c;
+  --green: #fafafa;
+  --green-2: #ffffff;
+  --mint: #1c1009;
+  --orange: #fb7c24;
+  --orange-soft: #251309;
+  --ring: #fb7c24;
+  background: #000000;
+}
+
+.app-layout .app-main,
+.app-layout .content {
+  background: var(--bg);
+}
+
+.app-layout .sidebar {
+  background: #ffffff;
+  color: #111111;
+  border-right: 1px solid #eeeeee;
+  box-shadow: none;
+}
+
+.app-layout .brand {
+  border-bottom-color: #eeeeee;
+}
+
+.app-layout .brand strong,
+.app-layout .profile strong {
+  color: #0a0a0a;
+}
+
+.app-layout .brand span,
+.app-layout .profile span {
+  color: #777777;
+}
+
+.app-layout .nav-link {
+  color: #3f3f3f;
+}
+
+.app-layout .nav-link:hover {
+  color: #111111;
+  background: #f7f7f7;
+}
+
+.app-layout .nav-link-active {
+  color: #111111;
+  background: #fff2e8;
+  box-shadow: inset 3px 0 #f97316;
+}
+
+.app-layout .sidebar-footer {
+  border-top-color: #eeeeee;
+}
+
+.app-layout .collapse-button {
+  background: #ffffff;
+  color: #111111;
+  border-color: #e8e8e8;
+}
+
+.dark .app-layout .sidebar {
+  background: #000000;
+  color: #fafafa;
+  border-right-color: #171717;
+}
+
+.dark .app-layout .brand {
+  border-bottom-color: #171717;
+}
+
+.dark .app-layout .brand strong,
+.dark .app-layout .profile strong {
+  color: #ffffff;
+}
+
+.dark .app-layout .brand span,
+.dark .app-layout .profile span {
+  color: #8d8d8d;
+}
+
+.dark .app-layout .nav-link {
+  color: #b8b8b8;
+}
+
+.dark .app-layout .nav-link:hover {
+  color: #ffffff;
+  background: #101010;
+}
+
+.dark .app-layout .nav-link-active {
+  color: #ffffff;
+  background: #1f1008;
+  box-shadow: inset 3px 0 #fb7c24;
+}
+
+.dark .app-layout .sidebar-footer {
+  border-top-color: #171717;
+}
+
+.dark .app-layout .collapse-button {
+  background: #080808;
+  color: #ffffff;
+  border-color: #222222;
+}
+
+.app-layout .topbar {
+  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid #ededed;
+}
+
+.dark .app-layout .topbar {
+  background: rgba(0,0,0,.94);
+  border-bottom-color: #181818;
+}
+
+.app-layout .metric-featured {
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+.dark .app-layout .metric-featured {
+  background: #0a0a0a;
+  border: 1px solid #1d1d1d;
+}
+
+.app-layout .eyebrow,
+.app-layout .panel-heading > div > span {
+  color: #f97316 !important;
+}
+
+.app-layout .nav-link-active svg,
+.app-layout .page-header [data-slot="button"] svg,
+.app-layout .live-dot {
+  color: #f97316;
+}
+
+.app-layout .mini-progress i,
+.app-layout .ranking i b,
+.app-layout .bar-chart i b {
+  background: #f97316 !important;
+}
+
+.app-layout .category-pills button.active,
+.app-layout .zone-tabs button.active {
+  background: #0a0a0a;
+  color: #ffffff;
+}
+
+.dark .app-layout .category-pills button.active,
+.dark .app-layout .zone-tabs button.active {
+  background: #ffffff;
+  color: #000000;
+}
+
+.app-layout [data-slot="table-container"],
+.app-layout [data-slot="table"],
+.app-layout [data-slot="table-header"],
+.app-layout [data-slot="table-row"],
+.app-layout [data-slot="table-head"],
+.app-layout [data-slot="table-cell"] {
+  border: 0 !important;
+}
+
+.app-layout .panel:has([data-slot="table"]) {
+  border: 0;
+  box-shadow: 0 1px 10px rgba(0,0,0,.04);
+}
+
+.dark .app-layout .panel:has([data-slot="table"]) {
+  box-shadow: 0 1px 14px rgba(255,255,255,.025);
+}
+
+.app-layout [data-slot="table-header"] {
+  background: #f6f6f6;
+}
+
+.dark .app-layout [data-slot="table-header"] {
+  background: #111111;
+}
+
+.app-layout [data-slot="table-row"]:hover {
+  background: #fafafa;
+}
+
+.dark .app-layout [data-slot="table-row"]:hover {
+  background: #101010;
+}
+
+/* Every legacy modal/workspace must also sit above the application shell. */
+.dialog-backdrop,
+.order-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147483000 !important;
+}
+
+.dialog-backdrop {
+  background: rgba(0,0,0,.34) !important;
+  backdrop-filter: none !important;
+}
+
+[data-slot="dialog-portal"] {
+  z-index: 2147483000 !important;
+}
+
+[data-slot="dialog-content"] {
+  z-index: 2147483001 !important;
+  background: var(--surface) !important;
+  border-color: var(--line) !important;
+}
+
+.dark [data-slot="dialog-overlay"] {
+  background: rgba(0,0,0,.72) !important;
+}
+
+.dark [data-slot="dialog-content"] {
+  background: #080808 !important;
+  border-color: #222222 !important;
+}
+
+/* Pagination follows the same neutral system; active page is black/white. */
+[data-slot="pagination"] [aria-current="page"] {
+  box-shadow: 0 0 0 2px rgba(249,115,22,.18);
+}
+
+@media (max-width: 900px) {
+  .app-layout .sidebar {
+    background: #ffffff;
+  }
+  .dark .app-layout .sidebar {
+    background: #000000;
+  }
+}

@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted-ui);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input-ui);
+  --color-ring: var(--ring);
+}
+
+
 :root {
+  --background: var(--bg); --foreground: var(--text); --card: var(--surface); --card-foreground: var(--text);
+  --secondary: var(--surface-2); --secondary-foreground: var(--text); --muted-ui: var(--surface-2); --muted-foreground: var(--muted);
+  --accent: var(--surface-2); --accent-foreground: var(--text); --destructive: var(--red); --border: var(--line); --input-ui: var(--line); --ring: var(--green);
   --bg: #f4f6f3; --surface: #ffffff; --surface-2: #f7f8f6; --text: #17201b; --muted: #6e7973;
   --line: #e4e8e4; --green: #276146; --green-2: #1d4a35; --mint: #e1f0e7; --orange: #ed6638;
   --orange-soft: #fff0e9; --red: #d84a42; --amber: #e9a422; --blue: #3577cc; --shadow: 0 16px 40px rgba(26, 47, 36, .07);

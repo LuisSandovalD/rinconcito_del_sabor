@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 type Variant = "default" | "primary" | "secondary" | "outline" | "ghost" | "destructive" | "danger";
 type Size = "default" | "sm" | "lg" | "icon";
 
+const legacyVariant: Record<Variant, string> = { default: "button-primary", primary: "button-primary", secondary: "button-secondary", outline: "button-secondary", ghost: "button-ghost", destructive: "button-danger", danger: "button-danger" };
+
 const variantClasses: Record<Variant, string> = {
   default: "bg-foreground text-background hover:opacity-90",
   primary: "bg-foreground text-background hover:opacity-90",
@@ -43,7 +45,7 @@ export function Button({
       data-size={size}
       aria-busy={loading || undefined}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "button", legacyVariant[variant], "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors outline-none disabled:pointer-events-none disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         variantClasses[variant],
         sizeClasses[size],
         className

@@ -112,16 +112,16 @@ export default function CashPage() {
     {!visible.length && <EmptyState icon={<ReceiptText/>} title="No hay cuentas pendientes" detail="Las mesas aparecerán automáticamente al solicitar la cuenta."/>}
 
     <Dialog open={Boolean(selected)} onOpenChange={openDialog => { if (!openDialog) { setSelected(null); setPayments([]); } }}>
-      <DialogContent className="max-h-[94vh] max-w-5xl overflow-y-auto p-0">
+      <DialogContent className="cash-payment-dialog max-w-[920px] overflow-hidden p-0">
         {selected && <>
-          <DialogHeader className="border-b border-border p-6 pr-14">
+          <DialogHeader className="cash-payment-header">
             <p className="eyebrow">REGISTRAR PAGO</p>
             <DialogTitle>Mesa {selected.table?.number} · Pedido #{selected.number}</DialogTitle>
             <DialogDescription>Registra uno o varios métodos de pago. El sistema calcula el saldo y el vuelto automáticamente.</DialogDescription>
           </DialogHeader>
 
-          <div className="payment-body">
-            <section className="bill-detail">
+          <div className="cash-payment-body">
+            <section className="cash-receipt-panel">
               <h3>Detalle de consumo</h3>
               {selected.items.map(item => <div key={item.id}><span>{item.quantity}× {item.productName}</span><strong>{money(item.total)}</strong></div>)}
               <Separator/>
@@ -130,10 +130,10 @@ export default function CashPage() {
               <div className="bill-total"><span>Total</span><strong>{money(selected.total)}</strong></div>
             </section>
 
-            <section className="payment-methods">
+            <section className="cash-payment-panel">
               <h3>¿Cómo pagará?</h3>
-              {payments.map((row, index) => <div className="payment-row" key={row.id}>
-                <div className="method-grid">{methods.map(method => <Button type="button" variant={row.method === method.id ? "default" : "outline"} key={method.id} onClick={() => updateRow(row.id, { method: method.id })}><method.icon/><span>{method.label}</span></Button>)}</div>
+              {payments.map((row, index) => <div className="cash-payment-row" key={row.id}>
+                <div className="cash-method-grid">{methods.map(method => <Button type="button" variant={row.method === method.id ? "default" : "outline"} key={method.id} onClick={() => updateRow(row.id, { method: method.id })}><method.icon/><span>{method.label}</span></Button>)}</div>
                 <label>Monto<Input type="number" min="0.01" step="0.01" value={row.amount} onChange={e => updateRow(row.id, { amount: Number(e.target.value) })}/></label>
                 {row.method === "CASH" && <label>Cliente entrega<Input type="number" min={row.amount} step="0.01" value={row.receivedAmount ?? row.amount} onChange={e => updateRow(row.id, { receivedAmount: Number(e.target.value) })}/></label>}
                 {payments.length > 1 && <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => setPayments(rows => rows.filter(item => item.id !== row.id))}><X/> Quitar</Button>}
@@ -141,11 +141,11 @@ export default function CashPage() {
                 {index < payments.length - 1 && <Separator/>}
               </div>)}
               <Button type="button" variant="outline" onClick={() => setPayments(rows => [...rows, { id: crypto.randomUUID(), method: "YAPE", amount: remaining || Number(selected.total) }])}><Plus/> Agregar otro método</Button>
-              <div className="payment-summary"><span>Pagado <strong>{money(paidTotal)}</strong></span><span>Falta <strong>{money(remaining)}</strong></span></div>
+              <div className="cash-payment-summary"><div><span>Pagado</span><strong>{money(paidTotal)}</strong></div><div><span>Saldo</span><strong>{money(remaining)}</strong></div></div>
             </section>
           </div>
 
-          <DialogFooter className="border-t border-border p-4">
+          <DialogFooter className="cash-payment-footer">
             <Button variant="outline" onClick={() => setSelected(null)}>Cancelar</Button>
             <Button loading={paymentMutation.isPending} disabled={Math.abs(paidTotal - Number(selected.total)) > 0.009} onClick={() => paymentMutation.mutate()}><CheckCircle2/> Confirmar pago · {money(paidTotal)}</Button>
           </DialogFooter>
@@ -154,14 +154,18 @@ export default function CashPage() {
     </Dialog>
 
     <Dialog open={showClose} onOpenChange={setShowClose}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="cash-close-dialog max-w-md">
         <DialogHeader>
           <p className="eyebrow">CIERRE DE TURNO</p>
           <DialogTitle>Cerrar caja</DialogTitle>
           <DialogDescription>El sistema espera {money(expected)}. Ingresa el efectivo contado antes de cerrar.</DialogDescription>
         </DialogHeader>
-        <label>Efectivo contado<Input autoFocus type="number" min="0" step="0.01" value={counted} onChange={e => setCounted(Number(e.target.value))}/></label>
-        <div className="difference"><span>Diferencia</span><strong>{money(counted - expected)}</strong></div>
+        <div className="cash-close-summary">
+          <div><span>Esperado</span><strong>{money(expected)}</strong></div>
+          <div><span>Contado</span><strong>{money(counted)}</strong></div>
+        </div>
+        <label className="cash-counted-field">Efectivo contado<Input autoFocus type="number" min="0" step="0.01" value={counted} onChange={e => setCounted(Number(e.target.value))}/></label>
+        <div className={`cash-close-difference ${counted - expected === 0 ? "is-zero" : counted - expected > 0 ? "is-positive" : "is-negative"}`}><span>Diferencia</span><strong>{money(counted - expected)}</strong></div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setShowClose(false)}>Cancelar</Button>
           <Button variant="destructive" loading={cashMutation.isPending} onClick={() => cashMutation.mutate({ action: "close", sessionId: cash.session!.id, countedCash: counted })}>Cerrar caja</Button>

@@ -13,7 +13,7 @@ export type RealtimeEvent = {
 
 function getPool() {
   if (!globalForRealtime.realtimePool) {
-    globalForRealtime.realtimePool = new Pool({ connectionString: getServerEnv().DATABASE_URL, max: 30 });
+    globalForRealtime.realtimePool = new Pool({ connectionString: getServerEnv().DATABASE_URL, max: 2, idleTimeoutMillis: 10_000, connectionTimeoutMillis: 5_000 });
   }
   return globalForRealtime.realtimePool;
 }

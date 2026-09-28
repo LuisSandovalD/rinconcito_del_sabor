@@ -39,7 +39,7 @@ export function DialogContent({ className, children, showCloseButton = true, ...
 
   return (
     <div data-slot="dialog-portal" className="fixed inset-0 z-[100] grid place-items-center p-4">
-      <div data-slot="dialog-overlay" className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onMouseDown={() => onOpenChange(false)} />
+      <div data-slot="dialog-overlay" className="absolute inset-0 bg-black/30" onMouseDown={() => onOpenChange(false)} />
       <div
         data-slot="dialog-content"
         role="dialog"

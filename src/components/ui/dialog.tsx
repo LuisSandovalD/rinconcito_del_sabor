@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, type HTMLAttributes, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,10 +36,10 @@ export function DialogContent({ className, children, showCloseButton = true, ...
     };
   }, [open, onOpenChange]);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div data-slot="dialog-portal" className="fixed inset-0 z-[100] grid place-items-center p-4">
+  return createPortal(
+    <div data-slot="dialog-portal" className="fixed inset-0 z-[2147483000] grid place-items-center p-4">
       <div data-slot="dialog-overlay" className="absolute inset-0 bg-black/30" onMouseDown={() => onOpenChange(false)} />
       <div
         data-slot="dialog-content"
@@ -55,7 +56,8 @@ export function DialogContent({ className, children, showCloseButton = true, ...
           </Button>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

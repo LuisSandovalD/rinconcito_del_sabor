@@ -36,11 +36,8 @@
     "lucide-react": "^0.544.0",
     "next": "^16.4.0",
     "pg": "^8.16.3",
-<<<<<<< HEAD
     "prisma": "7.10.0",
-=======
     "qrcode": "^1.5.4",
->>>>>>> feature/cambios-completos
     "qrcode.react": "^4.2.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
@@ -58,12 +55,9 @@
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
     "eslint": "^9.35.0",
-<<<<<<< HEAD
     "eslint-config-next": "16.3.6",
-=======
     "eslint-plugin-react-hooks": "^7.1.1",
     "prisma": "7.10.0",
->>>>>>> feature/cambios-completos
     "tailwindcss": "^4.1.13",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2",

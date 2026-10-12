@@ -50,6 +50,8 @@ Si no defines `APP_URL`, el servidor intenta usar automáticamente las variables
 
 `DIRECT_URL` se usa en `prisma.config.ts` para `prisma migrate deploy`. Esto permite usar una conexión directa para migraciones aunque el runtime use una conexión con pooling.
 
+En Neon, copia como `DIRECT_URL` la cadena **Direct connection** cuyo host no contiene `-pooler`. El script de despliegue detecta una URL pooled de Neon y deriva el endpoint directo como protección adicional. También reintenta temporalmente si otro deployment conserva el advisory lock de Prisma; el bloqueo no se desactiva porque protege la atomicidad de las migraciones.
+
 En producción, el build ejecuta:
 
 ```text

@@ -42,6 +42,7 @@ try {
   }
   console.log(JSON.stringify({ status: persisted.status, tickets: persisted.tickets.length, tableStatus: persisted.table?.status }));
 } finally {
+  if (orderId) await db.auditLog.deleteMany({ where: { entity: "Order", entityId: orderId } });
   if (orderId) await db.order.deleteMany({ where: { id: orderId } });
   await db.tableSession.deleteMany({ where: { tableId: table.id } });
   await db.restaurantTable.delete({ where: { id: table.id } });

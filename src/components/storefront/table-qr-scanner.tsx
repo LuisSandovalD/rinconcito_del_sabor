@@ -92,7 +92,7 @@ export function TableQrScanner() {
           <h1 className="mt-3 text-3xl font-medium">Apunta al QR de tu mesa</h1>
           <p className="mt-4 text-sm leading-6 text-neutral-500 dark:text-[#9c9c9d]">Al reconocerlo abriremos automáticamente la carta vinculada a esa mesa. La aplicación rechazará códigos de otros sitios.</p>
           {error && <p role="alert" className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">{error}</p>}
-          <div className="mt-6 flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-[#2f3031] dark:bg-[#111214]"><ShieldCheck size={19} className="mt-0.5 shrink-0 text-[#ff6363]" /><p className="text-xs leading-5 text-neutral-500 dark:text-[#9c9c9d]">El QR incluye una credencial aleatoria. El pedido conserva la mesa y requiere validación antes de llegar a cocina.</p></div>
+          <div className="mt-6 flex items-start gap-3 rounded-xl border border-neutral-200 bg-neutral-50 p-4 dark:border-[#2f3031] dark:bg-[#111214]"><ShieldCheck size={19} className="mt-0.5 shrink-0 text-[#ff6363]" /><p className="text-xs leading-5 text-neutral-500 dark:text-[#9c9c9d]">El QR incluye una credencial aleatoria asociada a la mesa. Al confirmar, el pedido se envía directamente a cocina.</p></div>
         </div>
       </section>
     </main>

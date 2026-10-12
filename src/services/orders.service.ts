@@ -32,7 +32,6 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId?: str
     if (["RESERVED", "BLOCKED", "TO_CLEAN"].includes(table.status)) throw new ConflictError("Esta mesa no puede abrirse en su estado actual.");
 
     const settings = await tx.restaurantSettings.findUnique({ where: { id: "singleton" } });
-    let requiresApproval = false;
     let guestAccessType: "temporary" | "physical" | undefined;
 
     let tableSession;
@@ -50,10 +49,8 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId?: str
       });
       if (tableSession) {
         guestAccessType = "temporary";
-        requiresApproval = settings.waiterApprovalRequired;
       } else if (table.physicalQrOrderingEnabled && table.physicalQrTokenHash === input.guestTokenHash) {
         guestAccessType = "physical";
-        requiresApproval = true;
         tableSession = await tx.tableSession.findFirst({
           where: { tableId: table.id, status: "OPEN" },
           orderBy: { openedAt: "desc" }
@@ -79,17 +76,7 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId?: str
     const unavailable = products.find(product => !["AVAILABLE", "LOW_STOCK"].includes(product.availability));
     if (unavailable) throw new ConflictError(`${unavailable.name} ya no está disponible.`);
 
-    if (requiresApproval) {
-      const pendingApproval = await tx.order.findFirst({
-        where: { tableSessionId: tableSession.id, status: "NEW" },
-        select: { number: true }
-      });
-      if (pendingApproval) {
-        throw new ConflictError(`El pedido #${pendingApproval.number} todavía espera aprobación. Solicita ayuda al personal antes de enviar otro.`);
-      }
-    }
-
-    let order = requiresApproval ? null : await tx.order.findFirst({
+    let order = await tx.order.findFirst({
       where: { tableSessionId: tableSession.id, status: { in: [...activeOrderStatuses] } },
       orderBy: { openedAt: "desc" }
     });
@@ -99,15 +86,15 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId?: str
         data: {
           idempotencyKey: input.idempotencyKey,
           type: "DINE_IN",
-          status: requiresApproval ? "NEW" : "SENT",
+          status: "SENT",
           priority: input.priority ?? "NORMAL",
           tableId: table.id,
           tableSessionId: tableSession.id,
           waiterId: actorId ?? tableSession.waiterId,
           guestCount: input.guestCount,
           notes: input.notes,
-          confirmedAt: requiresApproval ? null : new Date(),
-          sentAt: requiresApproval ? null : new Date()
+          confirmedAt: new Date(),
+          sentAt: new Date()
         }
       });
     } else if (["DELIVERED", "PENDING_PAYMENT"].includes(order.status)) {
@@ -144,23 +131,23 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId?: str
 
     order = await tx.order.update({
       where: { id: order.id },
-      data: { subtotal, tax, total, status: requiresApproval ? "NEW" : "SENT", sentAt: requiresApproval ? null : order.sentAt ?? new Date(), version: { increment: 1 } }
+      data: { subtotal, tax, total, status: "SENT", sentAt: order.sentAt ?? new Date(), version: { increment: 1 } }
     });
-    for (const stationId of requiresApproval ? [] : stations) {
+    for (const stationId of stations) {
       await tx.kitchenTicket.upsert({
         where: { orderId_stationId: { orderId: order.id, stationId } },
         update: { status: "NEW", sentAt: new Date(), startedAt: null, readyAt: null },
         create: { orderId: order.id, stationId }
       });
     }
-    await tx.restaurantTable.update({ where: { id: table.id }, data: { status: requiresApproval ? "OCCUPIED" : "SENT", version: { increment: 1 } } });
-    await tx.orderStatusHistory.create({ data: { orderId: order.id, actorId, fromStatus: null, toStatus: requiresApproval ? "NEW" : "SENT", device } });
+    await tx.restaurantTable.update({ where: { id: table.id }, data: { status: "SENT", version: { increment: 1 } } });
+    await tx.orderStatusHistory.create({ data: { orderId: order.id, actorId, fromStatus: null, toStatus: "SENT", device } });
     await tx.idempotencyOperation.upsert({
       where: { scope_key: { scope: "ORDER_SUBMIT", key: input.idempotencyKey } },
       update: { resultId: order.id },
       create: { scope: "ORDER_SUBMIT", key: input.idempotencyKey, resultId: order.id, expiresAt: new Date(Date.now() + 86_400_000) }
     });
-    await recordAudit(tx, { userId: actorId, action: requiresApproval ? "GUEST_ORDER_AWAITING_APPROVAL" : "ORDER_SENT", module: "orders", entity: "Order", entityId: order.id, after: { total: total.toNumber(), itemCount: input.items.length }, metadata: { table: table.number, guestAccessType } });
+    await recordAudit(tx, { userId: actorId, action: "ORDER_SENT", module: "orders", entity: "Order", entityId: order.id, after: { total: total.toNumber(), itemCount: input.items.length }, metadata: { table: table.number, guestAccessType, directToKitchen: Boolean(input.guestTokenHash) } });
     return order.id;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 

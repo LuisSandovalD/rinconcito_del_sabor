@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Check, Download, QrCode, Save, ShieldCheck } from "lucide-react";
+import { BellRing, Check, Download, QrCode, Save } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client-api";
 import { Button, Input, PageHeader, Skeleton } from "@/components/ui";
 import { SettingsToggle as Toggle } from "@/components/settings/settings-toggle";
 
-type Settings = { tradeName: string; legalName: string; ruc?: string; address?: string; phone?: string; email?: string; igvRate: string; pricesIncludeTax: boolean; soundEnabled: boolean; qrOrderingEnabled: boolean; waiterApprovalRequired: boolean };
+type Settings = { tradeName: string; legalName: string; ruc?: string; address?: string; phone?: string; email?: string; igvRate: string; pricesIncludeTax: boolean; soundEnabled: boolean; qrOrderingEnabled: boolean };
 
 export default function SettingsPage() {
     const client = useQueryClient();
@@ -60,11 +60,10 @@ export default function SettingsPage() {
                             <Toggle icon={<Check size={15} />} title="Precios incluyen IGV" detail="El impuesto se desglosa automáticamente." checked={form.pricesIncludeTax} onChange={value => set("pricesIncludeTax", value)} />
                             <Toggle icon={<BellRing size={15} />} title="Sonidos en cocina" detail="Alerta para nuevas comandas." checked={form.soundEnabled} onChange={value => set("soundEnabled", value)} />
                             <Toggle icon={<QrCode size={15} />} title="Pedidos desde QR" detail="Permite pedidos desde las mesas." checked={form.qrOrderingEnabled} onChange={value => set("qrOrderingEnabled", value)} />
-                            <Toggle icon={<ShieldCheck size={15} />} title="Aprobación del mesero" detail="Los pedidos QR requieren confirmación." checked={form.waiterApprovalRequired} onChange={value => set("waiterApprovalRequired", value)} />
                         </div>
 
                         <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Genera un PDF seguro con todos los QR físicos. Cada pedido impreso requiere aprobación antes de llegar a cocina.</p>
+                            <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Genera un PDF seguro con todos los QR físicos. Los pedidos válidos se envían directamente a cocina.</p>
                             <Link href="/settings/qr" className="button button-secondary inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-xs font-medium"><Download size={14} />PDF de mesas</Link>
                         </div>
                     </div>

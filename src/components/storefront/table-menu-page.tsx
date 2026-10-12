@@ -102,7 +102,7 @@ export function TableMenuPage({ tableNumber }: { tableNumber: number }) {
       </header>
 
       <section className="mx-auto max-w-[1120px] px-4 pb-24 pt-12 sm:px-6 sm:pt-16">
-        <div className="max-w-2xl"><p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#ff6363]">Carta de la mesa {tableNumber}</p><h1 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">¿Qué se te antoja?</h1><p className="mt-4 text-base leading-7 text-neutral-500 dark:text-[#9c9c9d]">Agrega tus platos y envía el pedido para validación. No necesitas una cuenta porque el QR ya identificó de forma segura esta mesa.</p></div>
+        <div className="max-w-2xl"><p className="font-mono text-[10px] uppercase tracking-[0.1em] text-[#ff6363]">Carta de la mesa {tableNumber}</p><h1 className="mt-3 text-4xl font-medium tracking-tight sm:text-5xl">¿Qué se te antoja?</h1><p className="mt-4 text-base leading-7 text-neutral-500 dark:text-[#9c9c9d]">Agrega tus platos y envíalos directamente a cocina. No necesitas una cuenta porque el QR ya identificó de forma segura esta mesa.</p></div>
 
         <div className="mt-10 max-w-xl"><div className="relative"><Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-400" /><input value={search} onChange={event => { setSearch(event.target.value); setActiveCategory(null); }} placeholder="Buscar en la carta..." className="h-11 w-full rounded-lg border border-neutral-200 bg-white pl-10 pr-4 text-sm outline-none focus:border-neutral-500 dark:border-[#363739] dark:bg-[#111214] dark:text-white" /></div></div>
         <div className="mt-5 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">

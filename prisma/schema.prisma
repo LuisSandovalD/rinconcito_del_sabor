@@ -290,22 +290,21 @@ model PasswordResetToken {
 }
 
 model RestaurantSettings {
-  id                     String   @id @default("singleton")
-  legalName              String
-  tradeName              String
-  ruc                    String?
-  address                String?
-  phone                  String?
-  email                  String?
-  logoUrl                String?
-  currency               String   @default("PEN")
-  timezone               String   @default("America/Lima")
-  igvRate                Decimal  @default(18) @db.Decimal(5, 2)
-  pricesIncludeTax       Boolean  @default(true)
-  soundEnabled           Boolean  @default(true)
-  qrOrderingEnabled      Boolean  @default(false)
-  waiterApprovalRequired Boolean  @default(true)
-  updatedAt              DateTime @updatedAt
+  id                String   @id @default("singleton")
+  legalName         String
+  tradeName         String
+  ruc               String?
+  address           String?
+  phone             String?
+  email             String?
+  logoUrl           String?
+  currency          String   @default("PEN")
+  timezone          String   @default("America/Lima")
+  igvRate           Decimal  @default(18) @db.Decimal(5, 2)
+  pricesIncludeTax  Boolean  @default(true)
+  soundEnabled      Boolean  @default(true)
+  qrOrderingEnabled Boolean  @default(false)
+  updatedAt         DateTime @updatedAt
 }
 
 model Zone {

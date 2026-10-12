@@ -20,7 +20,7 @@ type Product = { id: string; name: string; description?: string | null; price: s
 type ProductData = { products: Product[]; categories: Array<{ id: string; name: string }>; stations: unknown[] };
 type CartItem = { key: string; product: Product; quantity: number; notes: string; modifiers: Array<{ name: string; priceDelta: number }> };
 
-const labels: Record<string, string> = { FREE: "Disponible", RESERVED: "Reservada", NEW: "Requiere aprobación", SENT: "En cocina", PREPARING: "Preparando", PARTIALLY_READY: "Parcialmente listo", READY: "Listo para entregar", WAITING_DELIVERY: "Esperando entrega", WAITING_BILL: "Solicitó cuenta", PENDING_PAYMENT: "Pendiente de pago", OCCUPIED: "Ocupada", DELIVERED: "Entregado" };
+const labels: Record<string, string> = { FREE: "Disponible", RESERVED: "Reservada", NEW: "Pendiente de autorización", SENT: "En cocina", PREPARING: "Preparando", PARTIALLY_READY: "Parcialmente listo", READY: "Listo para entregar", WAITING_DELIVERY: "Esperando entrega", WAITING_BILL: "Solicitó cuenta", PENDING_PAYMENT: "Pendiente de pago", OCCUPIED: "Ocupada", DELIVERED: "Entregado" };
 
 export default function TablesPage() {
   const client = useQueryClient();

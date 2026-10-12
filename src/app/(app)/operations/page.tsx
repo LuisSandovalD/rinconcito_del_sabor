@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bike, CalendarDays, Check, Clock3, MapPin, PackageCheck, Phone, Plus, ShoppingBag, Users } from "lucide-react";
+import { Bike, CalendarDays, Check, Clock3, ExternalLink, MapPin, PackageCheck, Phone, Plus, ShoppingBag, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api, money } from "@/lib/client-api";
 import { Badge, Button, EmptyState, PageHeader, Skeleton } from "@/components/ui";
@@ -11,7 +11,7 @@ import { CreateExternalOrderDialog } from "@/components/operations/create-extern
 import { CreateReservationDialog } from "@/components/operations/create-reservation-dialog";
 
 type Reservation = { id: string; customerName: string; phone: string; partySize: number; reservedFor: string; status: string; notes?: string; table?: { id: string; number: number; zone: { name: string } } | null };
-type ExternalOrder = { id: string; number: number; type: "TAKEAWAY" | "DELIVERY"; status: string; customerName: string; customerPhone?: string; deliveryAddress?: string; total: string; openedAt: string; items: Array<{ id: string; productName: string; quantity: number }>; delivery?: { status: string } | null };
+type ExternalOrder = { id: string; number: number; type: "TAKEAWAY" | "DELIVERY"; status: string; customerName: string; customerPhone?: string; deliveryAddress?: string; total: string; openedAt: string; items: Array<{ id: string; productName: string; quantity: number }>; delivery?: { status: string; recipientType: "SELF" | "OTHER"; mapsUrl?: string } | null };
 
 export default function OperationsPage() {
     const client = useQueryClient();
@@ -48,14 +48,14 @@ export default function OperationsPage() {
                                     <div className="flex items-center gap-2">
                                         {order.type === "DELIVERY" ? <Bike size={14} className="text-neutral-400" /> : <ShoppingBag size={14} className="text-neutral-400" />}
                                         <span className="text-xs font-medium text-neutral-500">{order.type === "DELIVERY" ? "Delivery" : "Para llevar"}</span>
-                                        <Badge tone={order.status === "READY" ? "success" : order.status === "PREPARING" ? "warning" : "neutral"} className="rounded-md px-2 py-0 text-[10px]">{order.delivery?.status ?? order.status}</Badge>
+                                        <Badge tone={order.status === "READY" ? "success" : order.status === "PREPARING" || (order.status === "NEW" && order.delivery?.recipientType === "OTHER") ? "warning" : "neutral"} className="rounded-md px-2 py-0 text-[10px]">{order.status === "NEW" && order.delivery?.recipientType === "OTHER" ? "ESPERANDO AUTORIZACIÓN" : order.delivery?.status ?? order.status}</Badge>
                                     </div>
                                     <div className="mt-1 flex items-center gap-2"><strong className="text-sm font-semibold text-neutral-900 dark:text-white">#{order.number}</strong><span className="truncate text-sm text-neutral-600 dark:text-neutral-300">{order.customerName}</span></div>
                                 </div>
                                 <strong className="text-sm font-semibold text-neutral-900 dark:text-white">{money(order.total)}</strong>
                             </div>
 
-                            {(order.customerPhone || order.deliveryAddress) && <div className="mt-2 flex flex-wrap gap-3 text-xs text-neutral-400">{order.customerPhone && <span className="flex items-center gap-1"><Phone size={12} />{order.customerPhone}</span>}{order.deliveryAddress && <span className="flex items-center gap-1"><MapPin size={12} />{order.deliveryAddress}</span>}</div>}
+                            {(order.customerPhone || order.deliveryAddress || order.delivery?.mapsUrl) && <div className="mt-2 flex flex-wrap gap-3 text-xs text-neutral-400">{order.customerPhone && <span className="flex items-center gap-1"><Phone size={12} />{order.customerPhone}</span>}{order.deliveryAddress && <span className="flex items-center gap-1"><MapPin size={12} />{order.deliveryAddress}</span>}{order.delivery?.mapsUrl && <a href={order.delivery.mapsUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 font-medium text-blue-600 dark:text-blue-400">Abrir ubicación exacta<ExternalLink size={11} /></a>}</div>}
 
                             <div className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">{order.items.slice(0, 3).map(item => <span key={item.id} className="mr-3">{item.quantity}× {item.productName}</span>)}{order.items.length > 3 && <span className="text-xs">+{order.items.length - 3} más</span>}</div>
 

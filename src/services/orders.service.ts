@@ -209,6 +209,10 @@ export async function updateOrderStatus(orderId: string, action: "approve" | "st
     } else {
       if (order.status === "PAID") throw new ConflictError("Un pedido pagado no puede cancelarse.");
       status = "CANCELLED"; tableStatus = "FREE"; dates.cancelledAt = new Date();
+      if (order.delivery) {
+        await tx.deliveryOrder.update({ where: { id: order.delivery.id }, data: { status: "CANCELLED" } });
+        await tx.deliveryConsent.deleteMany({ where: { deliveryOrderId: order.delivery.id } });
+      }
     }
     await tx.order.update({ where: { id: orderId }, data: { status, ...dates, version: { increment: 1 } } });
     if (order.tableId) await tx.restaurantTable.update({ where: { id: order.tableId }, data: { status: tableStatus, version: { increment: 1 } } });
@@ -226,6 +230,7 @@ export async function markOrderItemReady(orderId: string, itemId: string, actorI
   await db.$transaction(async tx => {
     const item = await tx.orderItem.findFirst({ where: { id: itemId, orderId }, include: { order: true, product: true } });
     if (!item) throw new NotFoundError("Producto del pedido no encontrado.");
+    if (!["SENT", "RECEIVED", "PREPARING", "PARTIALLY_READY"].includes(item.order.status)) throw new ConflictError("Este pedido no está habilitado para preparación.");
     if (item.status === "READY" || item.status === "DELIVERED") return;
     await tx.orderItem.update({ where: { id: itemId }, data: { status: "READY", readyAt: new Date() } });
     const remaining = await tx.orderItem.count({ where: { orderId, status: { notIn: ["READY", "DELIVERED", "CANCELLED"] } } });

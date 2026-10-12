@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banknote, Calculator, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Landmark, Plus, ReceiptText, Search, Smartphone, WalletCards, X } from "lucide-react";
+import { Banknote, Calculator, CheckCircle2, CircleDollarSign, CreditCard, Landmark, Plus, ReceiptText, Search, Smartphone, WalletCards, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, elapsed, money } from "@/lib/client-api";
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, PageHeader, Separator, Skeleton } from "@/components/ui";
+import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, PageHeader, Separator, Skeleton, StatCard } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 type Item = { id: string; productName: string; quantity: number; total: string };
@@ -88,9 +88,9 @@ export default function CashPage() {
       <PageHeader eyebrow="CAJA ABIERTA" title="Cuentas por cobrar" description={`${cash.session.register.name} · ${elapsed(cash.session.openedAt)} min abierta`} action={<Button variant="outline" onClick={() => setShowClose(true)} className="h-9 rounded-lg px-3 text-sm">Cerrar caja</Button>} />
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Efectivo esperado" value={money(expected)} />
-        <Metric label="Ventas registradas" value={money(cash.totals.SALE ?? 0)} />
-        <Metric label="Cuentas pendientes" value={String(orders.length)} />
+        <StatCard label="Efectivo esperado" value={money(expected)} />
+        <StatCard label="Ventas registradas" value={money(cash.totals.SALE ?? 0)} />
+        <StatCard label="Cuentas pendientes" value={String(orders.length)} />
       </section>
 
       <div className="relative max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar mesa o pedido..." className="h-9 rounded-lg pl-9 text-sm" /></div>
@@ -157,8 +157,4 @@ export default function CashPage() {
       </Dialog>
     </div>
   );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <article className="rounded-xl border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900"><span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">{label}</span><strong className="mt-1 block text-lg font-semibold text-neutral-900 dark:text-white">{value}</strong></article>;
 }

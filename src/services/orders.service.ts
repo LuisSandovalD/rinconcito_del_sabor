@@ -1,6 +1,6 @@
 import { Prisma } from "../../generated/prisma/client";
 import { db } from "@/lib/db";
-import { ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
+import { AuthorizationError, ConflictError, NotFoundError, ValidationError } from "@/lib/errors";
 import { publishRealtimeEvent } from "@/lib/realtime";
 import { recordAudit } from "@/services/audit.service";
 
@@ -10,6 +10,7 @@ export type CreateOrderInput = {
   guestCount: number;
   priority?: "NORMAL" | "PRIORITY" | "RUSH" | "CHILD";
   notes?: string;
+  guestTokenHash?: string;
   items: Array<{
     productId: string;
     quantity: number;
@@ -20,7 +21,7 @@ export type CreateOrderInput = {
 
 const activeOrderStatuses = ["NEW", "CONFIRMED", "SENT", "RECEIVED", "PREPARING", "PARTIALLY_READY", "READY", "DELIVERED", "PENDING_PAYMENT"] as const;
 
-export async function createOrExtendOrder(input: CreateOrderInput, actorId: string, device?: string) {
+export async function createOrExtendOrder(input: CreateOrderInput, actorId?: string, device?: string) {
   if (!input.items.length) throw new ValidationError("Agrega al menos un producto al pedido.");
   const existingOperation = await db.idempotencyOperation.findUnique({ where: { scope_key: { scope: "ORDER_SUBMIT", key: input.idempotencyKey } } });
   if (existingOperation?.resultId) return getOrder(existingOperation.resultId);
@@ -30,6 +31,46 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId: stri
     if (!table || !table.active) throw new NotFoundError("La mesa ya no está disponible.");
     if (["RESERVED", "BLOCKED", "TO_CLEAN"].includes(table.status)) throw new ConflictError("Esta mesa no puede abrirse en su estado actual.");
 
+    const settings = await tx.restaurantSettings.findUnique({ where: { id: "singleton" } });
+    let requiresApproval = false;
+    let guestAccessType: "temporary" | "physical" | undefined;
+
+    let tableSession;
+    if (input.guestTokenHash) {
+      if (!settings?.qrOrderingEnabled) throw new AuthorizationError("Los pedidos desde mesa están desactivados.");
+      tableSession = await tx.tableSession.findFirst({
+        where: {
+          tableId: table.id,
+          status: "OPEN",
+          guestOrderingEnabled: true,
+          guestTokenHash: input.guestTokenHash,
+          guestTokenExpiresAt: { gt: new Date() }
+        },
+        orderBy: { openedAt: "desc" }
+      });
+      if (tableSession) {
+        guestAccessType = "temporary";
+        requiresApproval = settings.waiterApprovalRequired;
+      } else if (table.physicalQrOrderingEnabled && table.physicalQrTokenHash === input.guestTokenHash) {
+        guestAccessType = "physical";
+        requiresApproval = true;
+        tableSession = await tx.tableSession.findFirst({
+          where: { tableId: table.id, status: "OPEN" },
+          orderBy: { openedAt: "desc" }
+        });
+        if (!tableSession) {
+          tableSession = await tx.tableSession.create({
+            data: { tableId: table.id, guestCount: input.guestCount }
+          });
+        }
+      } else {
+        throw new AuthorizationError("El acceso de esta mesa venció o fue revocado. Escanea el QR físico vigente o solicita ayuda al personal.");
+      }
+    } else {
+      tableSession = await tx.tableSession.findFirst({ where: { tableId: table.id, status: "OPEN" }, orderBy: { openedAt: "desc" } });
+      if (!tableSession) tableSession = await tx.tableSession.create({ data: { tableId: table.id, waiterId: actorId, guestCount: input.guestCount } });
+    }
+
     const products = await tx.product.findMany({
       where: { id: { in: input.items.map(item => item.productId) }, active: true },
       include: { station: true }
@@ -38,12 +79,17 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId: stri
     const unavailable = products.find(product => !["AVAILABLE", "LOW_STOCK"].includes(product.availability));
     if (unavailable) throw new ConflictError(`${unavailable.name} ya no está disponible.`);
 
-    let tableSession = await tx.tableSession.findFirst({ where: { tableId: table.id, status: "OPEN" }, orderBy: { openedAt: "desc" } });
-    if (!tableSession) {
-      tableSession = await tx.tableSession.create({ data: { tableId: table.id, waiterId: actorId, guestCount: input.guestCount } });
+    if (requiresApproval) {
+      const pendingApproval = await tx.order.findFirst({
+        where: { tableSessionId: tableSession.id, status: "NEW" },
+        select: { number: true }
+      });
+      if (pendingApproval) {
+        throw new ConflictError(`El pedido #${pendingApproval.number} todavía espera aprobación. Solicita ayuda al personal antes de enviar otro.`);
+      }
     }
 
-    let order = await tx.order.findFirst({
+    let order = requiresApproval ? null : await tx.order.findFirst({
       where: { tableSessionId: tableSession.id, status: { in: [...activeOrderStatuses] } },
       orderBy: { openedAt: "desc" }
     });
@@ -53,15 +99,15 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId: stri
         data: {
           idempotencyKey: input.idempotencyKey,
           type: "DINE_IN",
-          status: "SENT",
+          status: requiresApproval ? "NEW" : "SENT",
           priority: input.priority ?? "NORMAL",
           tableId: table.id,
           tableSessionId: tableSession.id,
-          waiterId: actorId,
+          waiterId: actorId ?? tableSession.waiterId,
           guestCount: input.guestCount,
           notes: input.notes,
-          confirmedAt: new Date(),
-          sentAt: new Date()
+          confirmedAt: requiresApproval ? null : new Date(),
+          sentAt: requiresApproval ? null : new Date()
         }
       });
     } else if (["DELIVERED", "PENDING_PAYMENT"].includes(order.status)) {
@@ -91,7 +137,6 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId: stri
       });
     }
 
-    const settings = await tx.restaurantSettings.findUnique({ where: { id: "singleton" } });
     const subtotal = order.subtotal.plus(addedTotal);
     const taxRate = settings?.igvRate ?? new Prisma.Decimal(18);
     const tax = settings?.pricesIncludeTax !== false ? subtotal.mul(taxRate).div(new Prisma.Decimal(100).plus(taxRate)) : subtotal.mul(taxRate).div(100);
@@ -99,23 +144,23 @@ export async function createOrExtendOrder(input: CreateOrderInput, actorId: stri
 
     order = await tx.order.update({
       where: { id: order.id },
-      data: { subtotal, tax, total, status: "SENT", sentAt: order.sentAt ?? new Date(), version: { increment: 1 } }
+      data: { subtotal, tax, total, status: requiresApproval ? "NEW" : "SENT", sentAt: requiresApproval ? null : order.sentAt ?? new Date(), version: { increment: 1 } }
     });
-    for (const stationId of stations) {
+    for (const stationId of requiresApproval ? [] : stations) {
       await tx.kitchenTicket.upsert({
         where: { orderId_stationId: { orderId: order.id, stationId } },
         update: { status: "NEW", sentAt: new Date(), startedAt: null, readyAt: null },
         create: { orderId: order.id, stationId }
       });
     }
-    await tx.restaurantTable.update({ where: { id: table.id }, data: { status: "SENT", version: { increment: 1 } } });
-    await tx.orderStatusHistory.create({ data: { orderId: order.id, actorId, fromStatus: null, toStatus: "SENT", device } });
+    await tx.restaurantTable.update({ where: { id: table.id }, data: { status: requiresApproval ? "OCCUPIED" : "SENT", version: { increment: 1 } } });
+    await tx.orderStatusHistory.create({ data: { orderId: order.id, actorId, fromStatus: null, toStatus: requiresApproval ? "NEW" : "SENT", device } });
     await tx.idempotencyOperation.upsert({
       where: { scope_key: { scope: "ORDER_SUBMIT", key: input.idempotencyKey } },
       update: { resultId: order.id },
       create: { scope: "ORDER_SUBMIT", key: input.idempotencyKey, resultId: order.id, expiresAt: new Date(Date.now() + 86_400_000) }
     });
-    await recordAudit(tx, { userId: actorId, action: "ORDER_SENT", module: "orders", entity: "Order", entityId: order.id, after: { total: total.toNumber(), itemCount: input.items.length }, metadata: { table: table.number } });
+    await recordAudit(tx, { userId: actorId, action: requiresApproval ? "GUEST_ORDER_AWAITING_APPROVAL" : "ORDER_SENT", module: "orders", entity: "Order", entityId: order.id, after: { total: total.toNumber(), itemCount: input.items.length }, metadata: { table: table.number, guestAccessType } });
     return order.id;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
@@ -133,15 +178,22 @@ export async function getOrder(id: string) {
   return order;
 }
 
-export async function updateOrderStatus(orderId: string, action: "start" | "deliver" | "request_bill" | "cancel", actorId: string, device?: string) {
+export async function updateOrderStatus(orderId: string, action: "approve" | "start" | "deliver" | "request_bill" | "cancel", actorId: string, device?: string) {
   const orderIdResult = await db.$transaction(async tx => {
-    const order = await tx.order.findUnique({ where: { id: orderId }, include: { table: true } });
+    const order = await tx.order.findUnique({ where: { id: orderId }, include: { table: true, delivery: { include: { consent: true } } } });
     if (!order) throw new NotFoundError("Pedido no encontrado.");
     const before = order.status;
-    let status: "PREPARING" | "DELIVERED" | "PENDING_PAYMENT" | "CANCELLED";
-    let tableStatus: "PREPARING" | "OCCUPIED" | "PENDING_PAYMENT" | "FREE";
+    let status: "SENT" | "PREPARING" | "DELIVERED" | "PENDING_PAYMENT" | "CANCELLED";
+    let tableStatus: "SENT" | "PREPARING" | "OCCUPIED" | "PENDING_PAYMENT" | "FREE";
     const dates: Record<string, Date> = {};
-    if (action === "start") {
+    if (action === "approve") {
+      if (order.status !== "NEW") throw new ConflictError("Este pedido ya fue revisado.");
+      if (order.delivery?.consent?.status === "PENDING") throw new ConflictError("El destinatario debe confirmar el delivery desde su enlace privado antes de enviarlo a cocina.");
+      status = "SENT"; tableStatus = "SENT"; dates.confirmedAt = new Date(); dates.sentAt = new Date();
+      const items = await tx.orderItem.findMany({ where: { orderId }, select: { product: { select: { stationId: true } } } });
+      const stationIds = [...new Set(items.map(item => item.product.stationId).filter((id): id is string => Boolean(id)))];
+      for (const stationId of stationIds) await tx.kitchenTicket.upsert({ where: { orderId_stationId: { orderId, stationId } }, update: { status: "NEW", sentAt: new Date() }, create: { orderId, stationId } });
+    } else if (action === "start") {
       if (!["SENT", "RECEIVED"].includes(order.status)) throw new ConflictError("El pedido ya fue iniciado.");
       status = "PREPARING"; tableStatus = "PREPARING"; dates.startedAt = new Date();
       await tx.orderItem.updateMany({ where: { orderId, status: "PENDING" }, data: { status: "PREPARING", startedAt: new Date() } });
@@ -160,10 +212,11 @@ export async function updateOrderStatus(orderId: string, action: "start" | "deli
     }
     await tx.order.update({ where: { id: orderId }, data: { status, ...dates, version: { increment: 1 } } });
     if (order.tableId) await tx.restaurantTable.update({ where: { id: order.tableId }, data: { status: tableStatus, version: { increment: 1 } } });
+    if (action === "cancel" && order.tableSessionId) await tx.tableSession.update({ where: { id: order.tableSessionId }, data: { status: "CLOSED", closedAt: new Date(), guestOrderingEnabled: false, guestTokenHash: null, guestTokenExpiresAt: null } });
     await tx.orderStatusHistory.create({ data: { orderId, actorId, fromStatus: before, toStatus: status, device } });
     await recordAudit(tx, { userId: actorId, action: `ORDER_${status}`, module: "orders", entity: "Order", entityId: orderId, before: { status: before }, after: { status } });
     return order.id;
-  });
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   await publishRealtimeEvent({ resource: "orders", action: "status_changed", id: orderIdResult });
   await publishRealtimeEvent({ resource: "tables", action: "updated" });
   return getOrder(orderIdResult);

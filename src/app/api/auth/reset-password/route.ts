@@ -9,8 +9,8 @@ import { recordAudit } from "@/services/audit.service";
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "local";
-    rateLimit(`reset:${ip}`, 8, 15 * 60_000);
+    const ip = request.headers.get("x-real-ip") ?? "local";
+    await rateLimit(`reset:${ip}`, 8, 15 * 60_000);
     const input = z.object({ token: z.string().min(20), password: z.string().min(12).regex(/[A-Z]/, "Incluye una mayúscula").regex(/[0-9]/, "Incluye un número") }).parse(await readJson(request));
     const tokenHash = createHash("sha256").update(input.token).digest("hex");
     const reset = await db.passwordResetToken.findUnique({ where: { tokenHash } });

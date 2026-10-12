@@ -1,9 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowUpRight, ChefHat, CircleDollarSign, Clock3, ReceiptText, TableProperties } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, ChefHat, CircleDollarSign, ReceiptText, TableProperties } from "lucide-react";
 import { api, money, shortTime } from "@/lib/client-api";
-import { Badge, PageHeader, Skeleton } from "@/components/ui";
+import { Badge, MiniStat, PageHeader, Skeleton, StatCard } from "@/components/ui";
 
 type Dashboard = { sales: number; orders: number; averageTicket: number; occupied: number; free: number; kitchen: number; delayed: number; waitingPayment: number; lowStock: number; topProducts: Array<{ productName: string; _sum: { quantity: number; total: string } }>; recentOrders: Array<{ id: string; number: number; status: string; total: string; openedAt: string; table: { number: number } | null; waiter: { firstName: string } | null }> };
 
@@ -27,10 +27,10 @@ export default function DashboardPage() {
       {data.delayed > 0 && <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-300"><AlertTriangle size={17} /><span className="flex-1"><strong>{data.delayed} pedidos</strong> llevan más de 20 minutos en cocina.</span><a href="/kitchen" className="flex items-center gap-1 font-medium hover:underline">Ver cocina <ArrowUpRight size={14} /></a></div>}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric icon={<CircleDollarSign size={17} />} label="Ventas de hoy" value={money(data.sales)} />
-        <Metric icon={<ReceiptText size={17} />} label="Pedidos de hoy" value={String(data.orders)} detail={`Ticket ${money(data.averageTicket)}`} />
-        <Metric icon={<TableProperties size={17} />} label="Mesas ocupadas" value={`${data.occupied}/${data.occupied + data.free}`} progress={occupiedPercentage} />
-        <Metric icon={<ChefHat size={17} />} label="En cocina" value={String(data.kitchen)} detail={data.delayed ? `${data.delayed} demorados` : "A tiempo"} />
+        <StatCard prominent icon={<CircleDollarSign size={17} />} label="Ventas de hoy" value={money(data.sales)} />
+        <StatCard prominent icon={<ReceiptText size={17} />} label="Pedidos de hoy" value={String(data.orders)} detail={`Ticket ${money(data.averageTicket)}`} />
+        <StatCard prominent icon={<TableProperties size={17} />} label="Mesas ocupadas" value={`${data.occupied}/${data.occupied + data.free}`} progress={occupiedPercentage} />
+        <StatCard prominent icon={<ChefHat size={17} />} label="En cocina" value={String(data.kitchen)} detail={data.delayed ? `${data.delayed} demorados` : "A tiempo"} />
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.5fr_1fr]">
@@ -54,12 +54,4 @@ export default function DashboardPage() {
       </section>
     </div>
   );
-}
-
-function Metric({ icon, label, value, detail, progress }: { icon: React.ReactNode; label: string; value: string; detail?: string; progress?: number }) {
-  return <article className="rounded-xl border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900"><div className="flex items-center gap-2 text-neutral-400">{icon}<span className="text-[10px] font-medium uppercase tracking-[0.12em]">{label}</span></div><strong className="mt-1 block text-xl font-semibold text-neutral-900 dark:text-white">{value}</strong>{detail && <span className="mt-1 block text-xs text-neutral-400">{detail}</span>}{progress !== undefined && <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-100 dark:bg-neutral-800"><div className="h-full rounded-full bg-neutral-500 dark:bg-neutral-400" style={{ width: `${progress}%` }} /></div>}</article>;
-}
-
-function MiniStat({ label, value }: { label: string; value: number }) {
-  return <div className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm dark:border-neutral-800 dark:bg-neutral-900"><span className="text-neutral-500 dark:text-neutral-400">{label}</span><strong className="font-semibold text-neutral-900 dark:text-white">{value}</strong></div>;
 }

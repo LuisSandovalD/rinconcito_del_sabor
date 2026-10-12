@@ -3,7 +3,7 @@ import { handleApiError, ok, readJson } from "@/lib/api";
 import { requirePermission } from "@/lib/auth";
 import { updateOrderStatus } from "@/services/orders.service";
 
-const schema = z.object({ action: z.enum(["start", "deliver", "request_bill", "cancel"]) });
+const schema = z.object({ action: z.enum(["approve", "start", "deliver", "request_bill", "cancel"]) });
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {

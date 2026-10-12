@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Archive, BarChart3, Bell, Bike, ChefHat, ChevronLeft, CircleDollarSign, ClipboardList, Command, LayoutDashboard, LogOut, Menu, Moon, PackageOpen, Search, Settings, Sun, TableProperties, UsersRound, UtensilsCrossed, X } from "lucide-react";
+import { Archive, BarChart3, Bell, Bike, ChefHat, ChevronLeft, CircleDollarSign, ClipboardList, Command, LayoutDashboard, LogOut, Menu, PackageOpen, Search, Settings, TableProperties, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { useConnection } from "@/components/providers";
 import { GlobalSearch } from "@/components/global-search";
+import { ThemeSwitcher } from "@/components/theme";
 
 type Session = { id: string; name: string; firstName: string; roles: string[]; permissions: string[] } | null;
 
@@ -36,16 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [dark, setDark] = useState(false);
   const { data: session } = useQuery({ queryKey: ["session"], queryFn: () => api<Session>("/api/auth/session") });
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    const enabled = saved === "dark" || (!saved && matchMedia("(prefers-color-scheme: dark)").matches);
-    const timer = window.setTimeout(() => setDark(enabled), 0);
-    document.documentElement.classList.toggle("dark", enabled);
-    return () => window.clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -66,13 +59,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.refresh();
   };
 
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
-  };
-
   const connectionLabel = connection === "connected" ? "Conectado" : connection === "offline" ? "Sin conexión" : "Reconectando";
 
   if (path.startsWith("/kitchen")) {
@@ -80,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="min-h-dvh bg-neutral-950 text-white">
         <div className="fixed right-3 top-3 z-50 flex items-center gap-1.5">
           <div className="flex h-8 items-center gap-1.5 rounded-md border border-neutral-800 bg-neutral-900 px-2.5 text-[11px] text-neutral-400"><span className={cn("h-1.5 w-1.5 rounded-full", connection === "connected" ? "bg-emerald-500" : connection === "offline" ? "bg-red-500" : "bg-amber-500")} />{connection === "connected" ? "En vivo" : connectionLabel}</div>
-          <button type="button" onClick={toggleTheme} className="flex h-8 w-8 items-center justify-center rounded-md border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white">{dark ? <Sun size={16} /> : <Moon size={16} />}</button>
+          <ThemeSwitcher className="border-neutral-800 bg-neutral-900" />
           <Link href="/dashboard" className="flex h-8 items-center justify-center rounded-md border border-neutral-800 bg-neutral-900 px-3 text-xs text-neutral-300 hover:text-white">Salir</Link>
         </div>
         {children}
@@ -95,7 +81,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside className={cn("fixed inset-y-0 left-0 z-50 flex w-[250px] flex-col border-r border-neutral-200 bg-white transition-all duration-200 dark:border-neutral-800 dark:bg-neutral-950 lg:sticky lg:top-0 lg:h-dvh lg:translate-x-0", !mobileOpen && "-translate-x-full lg:translate-x-0", collapsed && "lg:w-[72px]")}>
         <div className={cn("flex h-16 shrink-0 items-center border-b border-neutral-100 px-4 dark:border-neutral-800", collapsed ? "lg:justify-center lg:px-2" : "justify-between")}>
           <div className={cn("flex min-w-0 items-center gap-2.5", collapsed && "lg:justify-center")}>
-            <img src={LOGO_URL} alt="Rinconcito del Sabor" className="h-9 w-9 shrink-0 object-contain" />
+            <Image src={LOGO_URL} alt="Rinconcito del Sabor" width={36} height={36} className="h-9 w-9 shrink-0 object-contain" />
             {!collapsed && <div className="min-w-0"><strong className="block truncate text-sm font-semibold text-neutral-900 dark:text-white">Rinconcito</strong><span className="block text-xs text-neutral-400">del Sabor</span></div>}
           </div>
           <button type="button" onClick={() => setMobileOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 lg:hidden"><X size={18} /></button>
@@ -131,7 +117,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="ml-auto flex items-center gap-1">
             <span className="hidden items-center gap-1.5 text-xs text-neutral-400 sm:flex"><span className={cn("h-1.5 w-1.5 rounded-full", connection === "connected" ? "bg-emerald-500" : connection === "offline" ? "bg-red-500" : "bg-amber-500")} />{connectionLabel}</span>
-            <button type="button" onClick={toggleTheme} aria-label="Cambiar tema" className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white">{dark ? <Sun size={16} /> : <Moon size={16} />}</button>
+            <ThemeSwitcher />
             <button type="button" aria-label="Notificaciones" className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white"><Bell size={16} /></button>
           </div>
         </header>

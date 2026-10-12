@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
-import { AppError, AuthenticationError } from "@/lib/errors";
+import { AppError, ValidationError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
+import { assertJsonContentType, assertSameOrigin } from "@/lib/request-security";
+
+export { assertSameOrigin } from "@/lib/request-security";
 
 export function ok<T>(data: T, init?: ResponseInit) {
-  return NextResponse.json({ data }, init);
+  const response = NextResponse.json({ data }, init);
+  response.headers.set("Cache-Control", "no-store");
+  return response;
 }
 
 export function handleApiError(error: unknown) {
@@ -18,15 +23,13 @@ export function handleApiError(error: unknown) {
   return NextResponse.json({ error: "No pudimos completar la operación. Inténtalo nuevamente.", code: "INTERNAL_ERROR" }, { status: 500 });
 }
 
-export function assertSameOrigin(request: Request) {
-  if (["GET", "HEAD", "OPTIONS"].includes(request.method)) return;
-  const origin = request.headers.get("origin");
-  const host = request.headers.get("host");
-  if (!origin || !host) return;
-  if (new URL(origin).host !== host) throw new AuthenticationError("La solicitud no es válida.");
-}
-
 export async function readJson<T>(request: Request): Promise<T> {
   assertSameOrigin(request);
-  return request.json() as Promise<T>;
+  assertJsonContentType(request);
+  try {
+    return await request.json() as T;
+  } catch (error) {
+    if (error instanceof SyntaxError) throw new ValidationError("El cuerpo de la solicitud no contiene JSON válido.");
+    throw error;
+  }
 }

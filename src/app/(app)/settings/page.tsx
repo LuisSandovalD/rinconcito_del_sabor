@@ -1,12 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellRing, Check, Printer, QrCode, Save, ShieldCheck } from "lucide-react";
+import { BellRing, Check, Download, QrCode, Save, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client-api";
 import { Button, Input, PageHeader, Skeleton } from "@/components/ui";
+import { SettingsToggle as Toggle } from "@/components/settings/settings-toggle";
 
 type Settings = { tradeName: string; legalName: string; ruc?: string; address?: string; phone?: string; email?: string; igvRate: string; pricesIncludeTax: boolean; soundEnabled: boolean; qrOrderingEnabled: boolean; waiterApprovalRequired: boolean };
 
@@ -62,20 +63,13 @@ export default function SettingsPage() {
                             <Toggle icon={<ShieldCheck size={15} />} title="Aprobación del mesero" detail="Los pedidos QR requieren confirmación." checked={form.waiterApprovalRequired} onChange={value => set("waiterApprovalRequired", value)} />
                         </div>
 
-                        <Link href="/settings/qr" className="flex h-9 items-center justify-center gap-2 rounded-lg border border-neutral-200 px-3 text-sm font-medium text-neutral-600 transition hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800/50"><Printer size={15} />Imprimir QR de las mesas</Link>
+                        <div className="flex flex-col gap-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-800 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-xs leading-5 text-neutral-500 dark:text-neutral-400">Genera un PDF seguro con todos los QR físicos. Cada pedido impreso requiere aprobación antes de llegar a cocina.</p>
+                            <Link href="/settings/qr" className="button button-secondary inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-lg px-4 text-xs font-medium"><Download size={14} />PDF de mesas</Link>
+                        </div>
                     </div>
                 </article>
             </section>
         </div>
-    );
-}
-
-function Toggle({ icon, title, detail, checked, onChange }: { icon: React.ReactNode; title: string; detail: string; checked: boolean; onChange: (value: boolean) => void }) {
-    return (
-        <button type="button" onClick={() => onChange(!checked)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
-            <span className="shrink-0 text-neutral-400">{icon}</span>
-            <div className="min-w-0 flex-1"><strong className="block text-sm font-medium text-neutral-900 dark:text-white">{title}</strong><span className="mt-0.5 block text-xs text-neutral-500 dark:text-neutral-400">{detail}</span></div>
-            <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? "bg-neutral-900 dark:bg-white" : "bg-neutral-300 dark:bg-neutral-700"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform dark:bg-neutral-950 ${checked ? "translate-x-[18px]" : "translate-x-0.5"}`} /></span>
-        </button>
     );
 }

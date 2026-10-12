@@ -1,15 +1,15 @@
 "use client";
 
-/* Product media is transformed by Cloudinary before these URLs are stored. */
-/* eslint-disable @next/next/no-img-element */
-
+import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BellRing, Check, ChefHat, ChevronRight, CircleMinus, CirclePlus, Clock3, Minus, Plus, Search, ShoppingBag, Users, Utensils, X } from "lucide-react";
+import { ArrowLeft, BellRing, Check, ChefHat, ChevronRight, CircleMinus, CirclePlus, Clock3, Minus, Plus, QrCode, Search, ShoppingBag, Users, Utensils, X } from "lucide-react";
 import { toast } from "sonner";
 import { api, elapsed, money } from "@/lib/client-api";
 import { Badge, Button, EmptyState, Input, PageHeader, Skeleton } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { ProductCustomizerDialog } from "@/components/tables/product-customizer-dialog";
+import { GuestAccessDialog } from "@/components/tables/guest-access-dialog";
 
 type OrderItem = { id: string; productName: string; quantity: number; unitPrice: string; total: string; status: string; notes?: string | null; modifiers?: Array<{ name: string; priceDelta: string }> };
 type ActiveOrder = { id: string; number: number; status: string; total: string; sentAt?: string | null; waiter?: { firstName: string } | null; items: OrderItem[] };
@@ -20,7 +20,7 @@ type Product = { id: string; name: string; description?: string | null; price: s
 type ProductData = { products: Product[]; categories: Array<{ id: string; name: string }>; stations: unknown[] };
 type CartItem = { key: string; product: Product; quantity: number; notes: string; modifiers: Array<{ name: string; priceDelta: number }> };
 
-const labels: Record<string, string> = { FREE: "Disponible", RESERVED: "Reservada", SENT: "En cocina", PREPARING: "Preparando", PARTIALLY_READY: "Parcialmente listo", READY: "Listo para entregar", WAITING_DELIVERY: "Esperando entrega", WAITING_BILL: "Solicitó cuenta", PENDING_PAYMENT: "Pendiente de pago", OCCUPIED: "Ocupada", DELIVERED: "Entregado" };
+const labels: Record<string, string> = { FREE: "Disponible", RESERVED: "Reservada", NEW: "Requiere aprobación", SENT: "En cocina", PREPARING: "Preparando", PARTIALLY_READY: "Parcialmente listo", READY: "Listo para entregar", WAITING_DELIVERY: "Esperando entrega", WAITING_BILL: "Solicitó cuenta", PENDING_PAYMENT: "Pendiente de pago", OCCUPIED: "Ocupada", DELIVERED: "Entregado" };
 
 export default function TablesPage() {
   const client = useQueryClient();
@@ -34,6 +34,7 @@ export default function TablesPage() {
   const [guests, setGuests] = useState(2);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customize, setCustomize] = useState<Product | null>(null);
+  const [guestAccess, setGuestAccess] = useState<Table | null>(null);
 
   const currentZone = zones?.find(zone => zone.id === zoneId) ?? zones?.[0];
   const visible = useMemo(() => menu?.products.filter(product => (category === "all" || product.category.id === category) && `${product.name} ${product.category.name}`.toLowerCase().includes(search.toLowerCase())) ?? [], [menu, category, search]);
@@ -54,7 +55,7 @@ export default function TablesPage() {
 
   const action = useMutation({
     mutationFn: ({ orderId, action }: { orderId: string; action: string }) => api(`/api/orders/${orderId}/status`, { method: "PATCH", body: JSON.stringify({ action }) }),
-    onSuccess: (_data, variables) => { toast.success(variables.action === "deliver" ? "Pedido entregado." : "Cuenta enviada a caja."); void client.invalidateQueries({ queryKey: ["tables"] }); setSelected(null); },
+    onSuccess: (_data, variables) => { toast.success(variables.action === "approve" ? "Pedido aprobado y enviado a cocina." : variables.action === "deliver" ? "Pedido entregado." : "Cuenta enviada a caja."); void client.invalidateQueries({ queryKey: ["tables"] }); setSelected(null); },
     onError: error => toast.error(error.message)
   });
 
@@ -108,7 +109,7 @@ export default function TablesPage() {
             <header className="flex h-14 items-center gap-3 border-b border-neutral-200 bg-white px-4 dark:border-neutral-800 dark:bg-neutral-900">
               <button type="button" onClick={() => setSelected(null)} className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"><ArrowLeft size={18} /></button>
               <div><span className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400">Pedido</span><h2 className="text-base font-semibold text-neutral-900 dark:text-white">Mesa {String(selected.number).padStart(2, "0")}</h2></div>
-              <div className="ml-auto flex items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1 dark:border-neutral-800"><Users size={14} className="text-neutral-400" /><button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"><Minus size={13} /></button><strong className="min-w-5 text-center text-xs">{guests}</strong><button type="button" onClick={() => setGuests(Math.min(50, guests + 1))} className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"><Plus size={13} /></button></div>
+              <button type="button" onClick={() => setGuestAccess(selected)} className="ml-auto flex h-8 items-center gap-1.5 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-100 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800"><QrCode size={14} />Acceso cliente</button><div className="flex items-center gap-1 rounded-lg border border-neutral-200 px-2 py-1 dark:border-neutral-800"><Users size={14} className="text-neutral-400" /><button type="button" onClick={() => setGuests(Math.max(1, guests - 1))} className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"><Minus size={13} /></button><strong className="min-w-5 text-center text-xs">{guests}</strong><button type="button" onClick={() => setGuests(Math.min(50, guests + 1))} className="flex h-6 w-6 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"><Plus size={13} /></button></div>
               <button type="button" onClick={() => setSelected(null)} className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"><X size={18} /></button>
             </header>
 
@@ -125,7 +126,7 @@ export default function TablesPage() {
                   {visible.map(product => (
                     <article key={product.id} className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
                       <button type="button" onClick={() => setCustomize(product)} className="block w-full text-left">
-                        {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="aspect-[4/3] w-full object-cover" /> : <div className="flex aspect-[4/3] w-full items-center justify-center bg-neutral-100 text-neutral-300 dark:bg-neutral-800 dark:text-neutral-600"><Utensils size={28} /></div>}
+                        {product.imageUrl ? <div className="relative aspect-[4/3] w-full"><Image src={product.imageUrl} alt={product.name} fill sizes="(max-width: 768px) 50vw, 240px" className="object-cover" /></div> : <div className="flex aspect-[4/3] w-full items-center justify-center bg-neutral-100 text-neutral-300 dark:bg-neutral-800 dark:text-neutral-600"><Utensils size={28} /></div>}
                         <div className="p-3"><span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">{product.category.name}</span><h3 className="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-white">{product.name}</h3>{product.description && <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-neutral-500 dark:text-neutral-400">{product.description}</p>}<span className="mt-2 flex items-center gap-1 text-xs text-neutral-400"><Clock3 size={12} />{product.estimatedMinutes ?? 10} min</span></div>
                       </button>
                       <footer className="flex items-center justify-between border-t border-neutral-100 px-3 py-2.5 dark:border-neutral-800"><strong className="text-sm font-semibold text-neutral-900 dark:text-white">{money(product.price)}</strong><button type="button" onClick={() => addQuick(product)} className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700 dark:text-neutral-300 dark:hover:bg-neutral-800"><Plus size={16} /></button></footer>
@@ -137,7 +138,7 @@ export default function TablesPage() {
               <aside className="flex min-h-0 flex-col border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 lg:border-l lg:border-t-0">
                 <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3 dark:border-neutral-800"><div><h3 className="text-sm font-semibold text-neutral-900 dark:text-white">Pedido actual</h3><p className="text-xs text-neutral-400">Mesa {String(selected.number).padStart(2, "0")}</p></div><span className="text-xs text-neutral-400">{cart.reduce((sum, item) => sum + item.quantity, 0)} items</span></div>
 
-                {selected.orders[0] && <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800"><div className="flex items-start justify-between gap-3"><div><strong className="block text-sm">Pedido #{selected.orders[0].number}</strong><span className="text-xs text-neutral-400">{labels[selected.orders[0].status] ?? selected.orders[0].status}</span></div><strong className="text-sm">{money(selected.orders[0].total)}</strong></div>{selected.orders[0].status === "READY" && <Button className="mt-2 h-8 w-full rounded-lg text-xs" onClick={() => action.mutate({ orderId: selected.orders[0].id, action: "deliver" })}><Check size={14} />Entregar</Button>}{selected.orders[0].status === "DELIVERED" && <Button variant="outline" className="mt-2 h-8 w-full rounded-lg text-xs" onClick={() => action.mutate({ orderId: selected.orders[0].id, action: "request_bill" })}><BellRing size={14} />Solicitar cuenta</Button>}</div>}
+                {selected.orders[0] && <div className="border-b border-neutral-100 px-4 py-3 dark:border-neutral-800"><div className="flex items-start justify-between gap-3"><div><strong className="block text-sm">Pedido #{selected.orders[0].number}</strong><span className="text-xs text-neutral-400">{labels[selected.orders[0].status] ?? selected.orders[0].status}</span></div><strong className="text-sm">{money(selected.orders[0].total)}</strong></div>{selected.orders[0].status === "NEW" && <Button className="mt-2 h-8 w-full rounded-lg text-xs" onClick={() => action.mutate({ orderId: selected.orders[0].id, action: "approve" })}><Check size={14} />Aprobar y enviar a cocina</Button>}{selected.orders[0].status === "READY" && <Button className="mt-2 h-8 w-full rounded-lg text-xs" onClick={() => action.mutate({ orderId: selected.orders[0].id, action: "deliver" })}><Check size={14} />Entregar</Button>}{selected.orders[0].status === "DELIVERED" && <Button variant="outline" className="mt-2 h-8 w-full rounded-lg text-xs" onClick={() => action.mutate({ orderId: selected.orders[0].id, action: "request_bill" })}><BellRing size={14} />Solicitar cuenta</Button>}</div>}
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-4">
                   {!cart.length ? <EmptyState icon={<ShoppingBag />} title="Pedido vacío" detail="Agrega platos para comenzar." /> : <div className="divide-y divide-neutral-100 dark:divide-neutral-800">{cart.map(item => <div key={item.key} className="py-3"><div className="flex justify-between gap-3"><div className="min-w-0"><strong className="block truncate text-sm text-neutral-900 dark:text-white">{item.product.name}</strong>{item.modifiers.map(modifier => <span key={modifier.name} className="block text-xs text-neutral-500">+ {modifier.name}</span>)}{item.notes && <span className="block text-xs italic text-neutral-400">{item.notes}</span>}<span className="mt-1 block text-sm font-medium">{money((Number(item.product.price) + item.modifiers.reduce((sum, modifier) => sum + modifier.priceDelta, 0)) * item.quantity)}</span></div><div className="flex items-center gap-2"><button type="button" onClick={() => changeQuantity(item.key, -1)} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"><CircleMinus size={19} /></button><strong className="min-w-4 text-center text-xs">{item.quantity}</strong><button type="button" onClick={() => changeQuantity(item.key, 1)} className="text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"><CirclePlus size={19} /></button></div></div></div>)}</div>}
@@ -150,46 +151,8 @@ export default function TablesPage() {
         </div>
       )}
 
-      {customize && <ProductCustomizer product={customize} onClose={() => setCustomize(null)} onAdd={item => { setCart(items => [...items, item]); setCustomize(null); toast.success(`${customize.name} agregado.`); }} />}
-    </div>
-  );
-}
-
-function ProductCustomizer({ product, onClose, onAdd }: { product: Product; onClose: () => void; onAdd: (item: CartItem) => void }) {
-  const [quantity, setQuantity] = useState(1);
-  const [variant, setVariant] = useState<Modifier | null>(null);
-  const [addons, setAddons] = useState<Array<{ name: string; price: string }>>([]);
-  const [notes, setNotes] = useState("");
-  const groups = [...new Set(product.variants.map(item => item.groupName))];
-  const toggleAddon = (addon: { name: string; price: string }) => setAddons(items => items.some(item => item.name === addon.name) ? items.filter(item => item.name !== addon.name) : [...items, addon]);
-  const modifiers = [...(variant ? [{ name: variant.name, priceDelta: Number(variant.priceDelta) }] : []), ...addons.map(item => ({ name: item.name, priceDelta: Number(item.price) }))];
-  const total = (Number(product.price) + modifiers.reduce((sum, item) => sum + item.priceDelta, 0)) * quantity;
-
-  return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-3" onMouseDown={onClose}>
-      <div className="relative max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-xl bg-white dark:bg-neutral-900" onMouseDown={event => event.stopPropagation()}>
-        <button type="button" onClick={onClose} className="absolute right-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-md bg-black/40 text-white"><X size={16} /></button>
-        {product.imageUrl && <img src={product.imageUrl} alt={product.name} className="h-48 w-full object-cover" />}
-
-        <div className="p-4">
-          <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400">Personalizar</span>
-          <h2 className="mt-1 text-lg font-semibold text-neutral-900 dark:text-white">{product.name}</h2>
-          {product.description && <p className="mt-1 text-sm leading-5 text-neutral-500 dark:text-neutral-400">{product.description}</p>}
-
-          <div className="mt-4 space-y-4">
-            {groups.map(group => <div key={group}><strong className="block text-sm">{group}</strong><span className="text-xs text-neutral-400">Elige una opción</span><div className="mt-2 space-y-2">{product.variants.filter(item => item.groupName === group).map(item => <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 dark:border-neutral-800"><input type="radio" name={group} checked={variant?.name === item.name} onChange={() => setVariant(item)} className="h-4 w-4 accent-neutral-900 dark:accent-white" /><span className="flex-1 text-sm">{item.name}</span>{Number(item.priceDelta) > 0 && <span className="text-xs text-neutral-500">+ {money(item.priceDelta)}</span>}</label>)}</div></div>)}
-
-            {!!product.addons.length && <div><strong className="block text-sm">Extras</strong><span className="text-xs text-neutral-400">Opcional</span><div className="mt-2 space-y-2">{product.addons.map(item => <label key={item.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-neutral-200 px-3 py-2 dark:border-neutral-800"><input type="checkbox" checked={addons.some(addon => addon.name === item.name)} onChange={() => toggleAddon(item)} className="h-4 w-4 accent-neutral-900 dark:accent-white" /><span className="flex-1 text-sm">{item.name}</span><span className="text-xs text-neutral-500">+ {money(item.price)}</span></label>)}</div></div>}
-
-            <label className="block text-sm font-medium">Observaciones<textarea value={notes} onChange={event => setNotes(event.target.value)} placeholder="Ej. sin cebolla, salsa aparte..." maxLength={300} className="mt-1.5 min-h-20 w-full resize-none rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm outline-none dark:border-neutral-800 dark:bg-neutral-950" /></label>
-          </div>
-        </div>
-
-        <footer className="sticky bottom-0 flex items-center gap-3 border-t border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="flex h-9 items-center rounded-lg border border-neutral-200 dark:border-neutral-800"><button type="button" onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex h-full w-9 items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800"><Minus size={15} /></button><strong className="min-w-8 text-center text-sm">{quantity}</strong><button type="button" onClick={() => setQuantity(quantity + 1)} className="flex h-full w-9 items-center justify-center hover:bg-neutral-100 dark:hover:bg-neutral-800"><Plus size={15} /></button></div>
-          <Button className="h-9 flex-1 rounded-lg text-sm" onClick={() => onAdd({ key: crypto.randomUUID(), product, quantity, notes, modifiers })}>Agregar · {money(total)}</Button>
-        </footer>
-      </div>
+      {customize && <ProductCustomizerDialog product={customize} onClose={() => setCustomize(null)} onAdd={item => { setCart(items => [...items, item]); setCustomize(null); toast.success(`${customize.name} agregado.`); }} />}
+      {guestAccess && <GuestAccessDialog table={guestAccess} guestCount={guests} onClose={() => setGuestAccess(null)} />}
     </div>
   );
 }

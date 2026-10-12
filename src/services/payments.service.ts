@@ -46,7 +46,7 @@ export async function payOrder(input: PayInput, actorId: string) {
 
     await tx.order.update({ where: { id: order.id }, data: { status: "PAID", paidAt: new Date(), version: { increment: 1 } } });
     if (order.tableId) await tx.restaurantTable.update({ where: { id: order.tableId }, data: { status: "FREE", version: { increment: 1 } } });
-    if (order.tableSessionId) await tx.tableSession.update({ where: { id: order.tableSessionId }, data: { status: "CLOSED", closedAt: new Date() } });
+    if (order.tableSessionId) await tx.tableSession.update({ where: { id: order.tableSessionId }, data: { status: "CLOSED", closedAt: new Date(), guestOrderingEnabled: false, guestTokenHash: null, guestTokenExpiresAt: null } });
     await tx.orderStatusHistory.create({ data: { orderId: order.id, actorId, fromStatus: order.status, toStatus: "PAID" } });
     await tx.idempotencyOperation.create({ data: { scope: "PAYMENT", key: input.idempotencyKey, resultId: sale.id, expiresAt: new Date(Date.now() + 7 * 86_400_000) } });
     await recordAudit(tx, { userId: actorId, action: "PAYMENT_COMPLETED", module: "payments", entity: "Sale", entityId: sale.id, after: { total: order.total.toNumber(), methods: input.payments.map(payment => payment.method) }, metadata: { orderNumber: order.number } });

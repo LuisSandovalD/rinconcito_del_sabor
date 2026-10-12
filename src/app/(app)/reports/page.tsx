@@ -5,14 +5,13 @@ import { useQuery } from "@tanstack/react-query";
 import { BarChart3, CalendarDays, Download } from "lucide-react";
 import { toast } from "sonner";
 import { api, money, shortTime } from "@/lib/client-api";
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, Pagination, PageHeader, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui";
+import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, EmptyState, Input, Pagination, PageHeader, Skeleton, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui";
 
 type Report = { total: number; count: number; average: number; daily: Array<{ date: string; total: number }>; payments: Array<{ method: string; _sum: { amount: string } }>; items: Array<{ productName: string; _sum: { quantity: number; total: string } }>; sales: Array<{ id: string; total: string; createdAt: string; order: { number: number; waiter?: { firstName: string } | null }; payments: Array<{ method: string }> }>; range: { from: string; to: string; page: number; pageSize: number; totalPages: number; totalSales: number } };
 
 function prettyDate(value: string) {
   return new Intl.DateTimeFormat("es-PE", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Lima" }).format(new Date(`${value}T12:00:00-05:00`));
 }
-
 export default function ReportsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -51,10 +50,10 @@ export default function ReportsPage() {
       <PageHeader eyebrow={rangeLabel.toUpperCase()} title="Reportes de ventas" description="Rendimiento de ventas, productos y medios de pago." action={<div className="flex gap-2"><Button variant="outline" onClick={openRange} className="h-9 gap-2 rounded-lg px-3 text-sm"><CalendarDays size={15} />{rangeLabel}</Button><Button variant="outline" onClick={() => window.print()} className="h-9 gap-2 rounded-lg px-3 text-sm"><Download size={15} />Exportar</Button></div>} />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Metric label="Ventas netas" value={money(data.total)} />
-        <Metric label="Transacciones" value={String(data.count)} />
-        <Metric label="Ticket promedio" value={money(data.average)} />
-        <Metric label="Método principal" value={mainPayment} />
+        <StatCard label="Ventas netas" value={money(data.total)} />
+        <StatCard label="Transacciones" value={String(data.count)} />
+        <StatCard label="Ticket promedio" value={money(data.average)} />
+        <StatCard label="Método principal" value={mainPayment} truncate />
       </section>
 
       <section className="grid gap-3 xl:grid-cols-[1.45fr_1fr]">
@@ -99,8 +98,4 @@ export default function ReportsPage() {
       </Dialog>
     </div>
   );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return <article className="rounded-xl border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900"><span className="block text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">{label}</span><strong className="mt-1 block truncate text-lg font-semibold text-neutral-900 dark:text-white">{value}</strong></article>;
 }

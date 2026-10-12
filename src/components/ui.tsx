@@ -14,6 +14,7 @@ export { Separator } from "@/components/ui/separator";
 export { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 export { Textarea } from "@/components/ui/textarea";
 export { Pagination } from "@/components/ui/pagination";
+export { MiniStat, StatCard } from "@/components/ui/stat-card";
 
 const toneVariant = {
   neutral: "secondary",

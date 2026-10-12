@@ -26,9 +26,13 @@ function RealtimeBridge({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let source: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let disposed = false;
 
-    const connect = () => {
+    const connect = async () => {
       if (!navigator.onLine) { setConnection("offline"); return; }
+      const sessionResponse = await fetch("/api/auth/session", { cache: "no-store" });
+      const sessionBody = await sessionResponse.json() as { data?: unknown };
+      if (!sessionBody.data || disposed) { setConnection("connected"); return; }
       setConnection("reconnecting");
       source?.close();
       source = new EventSource("/api/realtime");
@@ -41,7 +45,7 @@ function RealtimeBridge({ children }: { children: React.ReactNode }) {
         setConnection(navigator.onLine ? "reconnecting" : "offline");
         if (navigator.onLine) {
           if (reconnectTimer) clearTimeout(reconnectTimer);
-          reconnectTimer = setTimeout(connect, 2_000);
+          reconnectTimer = setTimeout(() => void connect(), 2_000);
         }
       };
       source.addEventListener("update", event => {
@@ -55,11 +59,11 @@ function RealtimeBridge({ children }: { children: React.ReactNode }) {
         if (payload.resource === "notifications" && payload.action === "created") toast.success("Hay un pedido listo para entregar.");
       });
     };
-    const online = () => connect();
+    const online = () => { void connect(); };
     const offline = () => setConnection("offline");
     window.addEventListener("online", online); window.addEventListener("offline", offline);
-    connect();
-    return () => { source?.close(); if (reconnectTimer) clearTimeout(reconnectTimer); window.removeEventListener("online", online); window.removeEventListener("offline", offline); };
+    void connect();
+    return () => { disposed = true; source?.close(); if (reconnectTimer) clearTimeout(reconnectTimer); window.removeEventListener("online", online); window.removeEventListener("offline", offline); };
   }, [client]);
 
   return <ConnectionContext.Provider value={connection}>{children}</ConnectionContext.Provider>;

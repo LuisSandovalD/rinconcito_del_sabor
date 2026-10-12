@@ -12,13 +12,13 @@ async function request<T>(path: string, init: RequestInit = {}) {
     ...init,
     headers: { "content-type": "application/json", origin: baseUrl, ...(cookie ? { cookie } : {}), ...init.headers }
   });
-  if (path === "/api/auth/login") cookie = response.headers.get("set-cookie")?.split(";")[0] ?? "";
+  if (path === "/api/auth/unified-login") cookie = response.headers.get("set-cookie")?.split(";")[0] ?? "";
   const body = await response.json() as JsonResult<T>;
   if (!response.ok) throw new Error(`${path}: ${body.error ?? response.status}`);
   return body.data;
 }
 
-const login = await request<{ name: string }>("/api/auth/login", { method: "POST", body: JSON.stringify({ email: "admin@rinconcito.pe", password }) });
+const login = await request<{ kind: "staff"; name: string }>("/api/auth/unified-login", { method: "POST", body: JSON.stringify({ email: "admin@rinconcito.pe", password }) });
 const zones = await request<Array<{ tables: Array<{ id: string; number: number; status: string }> }>>("/api/tables");
 const catalog = await request<{ products: Array<{ id: string; name: string }> }>("/api/products?available=true");
 const cash = await request<{ session: { id: string } | null; registers: Array<{ id: string }> }>("/api/cash");

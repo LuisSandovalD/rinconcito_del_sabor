@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { AuthenticationError, AuthorizationError } from "@/lib/errors";
 import type { PermissionCode } from "@/lib/permissions";
 
-export const SESSION_COOKIE = "rinconcito_session";
+export const SESSION_COOKIE = process.env.NODE_ENV === "production" ? "__Host-rinconcito_session" : "rinconcito_session";
 const SESSION_DAYS = 14;
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -26,7 +26,7 @@ export async function createSession(userId: string) {
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     path: "/",
     expires: expiresAt
   });

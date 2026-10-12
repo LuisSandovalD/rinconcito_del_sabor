@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, PencilLine, Search } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Boxes, PencilLine, Search } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client-api";
-import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, EmptyState, Input, NativeSelect, Pagination, PageHeader, Skeleton, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from "@/components/ui";
+import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, EmptyState, Input, NativeSelect, Pagination, PageHeader, Skeleton, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from "@/components/ui";
 
 type Ingredient = { id: string; name: string; unit: string; stock: string; minStock?: string; averageCost: string; movements: Array<{ id: string; type: string; quantity: string; createdAt: string }> };
 
@@ -43,9 +43,9 @@ export default function InventoryPage() {
       <PageHeader eyebrow="CONTROL DE INSUMOS" title="Inventario" description="Stock, alertas y movimientos." action={<Button onClick={() => data[0] && openMovement(data[0])} disabled={!data.length} className="h-9 gap-2 rounded-lg px-3 text-sm"><PencilLine size={15} />Registrar movimiento</Button>} />
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Insumos activos" value={String(data.length)} />
-        <Metric label="Bajo mínimo" value={String(low.length)} warning={low.length > 0} />
-        <Metric label="Valor estimado" value={`S/ ${value.toFixed(2)}`} />
+        <StatCard label="Insumos activos" value={String(data.length)} />
+        <StatCard label="Bajo mínimo" value={String(low.length)} warning={low.length > 0} />
+        <StatCard label="Valor estimado" value={`S/ ${value.toFixed(2)}`} />
       </section>
 
       <div className="flex items-center justify-between gap-3">
@@ -109,8 +109,4 @@ export default function InventoryPage() {
       </Dialog>
     </div>
   );
-}
-
-function Metric({ label, value, warning = false }: { label: string; value: string; warning?: boolean }) {
-  return <article className="rounded-xl border border-neutral-200 bg-white px-4 py-3 dark:border-neutral-800 dark:bg-neutral-900"><div className="flex items-center justify-between"><span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">{label}</span>{warning && <AlertTriangle size={14} className="text-neutral-400" />}</div><strong className="mt-1 block text-lg font-semibold text-neutral-900 dark:text-white">{value}</strong></article>;
 }

@@ -7,11 +7,12 @@ import { emailService } from "@/services/email/brevo.service";
 
 export async function POST(request: Request) {
   try {
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0] ?? "local";
-    rateLimit(`forgot:${ip}`, 5, 15 * 60_000);
+    const ip = request.headers.get("x-real-ip") ?? "local";
+    await rateLimit(`forgot:${ip}`, 5, 15 * 60_000);
     const { email } = z.object({ email: z.email().transform(value => value.toLowerCase().trim()) }).parse(await readJson(request));
     const user = await db.user.findUnique({ where: { email } });
     if (user?.status === "ACTIVE") {
+      await rateLimit(`forgot-account:${user.id}`, 3, 60 * 60_000);
       const token = randomBytes(32).toString("base64url");
       const tokenHash = createHash("sha256").update(token).digest("hex");
       await db.passwordResetToken.create({ data: { userId: user.id, tokenHash, expiresAt: new Date(Date.now() + 30 * 60_000) } });

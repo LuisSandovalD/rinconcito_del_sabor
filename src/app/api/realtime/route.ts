@@ -1,9 +1,16 @@
 import { subscribeRealtime, type RealtimeEvent } from "@/lib/realtime";
+import { requireUser } from "@/lib/auth";
+import { handleApiError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  try {
+    await requireUser();
+  } catch (error) {
+    return handleApiError(error);
+  }
   const encoder = new TextEncoder();
   let closed = false;
   let heartbeat: ReturnType<typeof setInterval> | undefined;

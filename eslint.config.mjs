@@ -1,9 +1,9 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextVitals from "eslint-config-next/core-web-vitals";
-import nextTs from "eslint-config-next/typescript";
+import reactHooks from "eslint-plugin-react-hooks";
+import tseslint from "typescript-eslint";
 
 export default defineConfig([
-  ...nextVitals,
-  ...nextTs,
-  globalIgnores([".next/**", "generated/**", "coverage/**"])
+  globalIgnores([".next/**", "generated/**", "coverage/**", "output/**", "tmp/**"]),
+  ...tseslint.configs.recommended,
+  reactHooks.configs.flat["recommended-latest"]
 ]);

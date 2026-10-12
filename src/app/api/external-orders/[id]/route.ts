@@ -1,3 +1,4 @@
+import { Prisma } from "@/../generated/prisma/client";
 import { z } from "zod";
 import { handleApiError, ok, readJson } from "@/lib/api";
 import { requirePermission } from "@/lib/auth";
@@ -5,5 +6,40 @@ import { db } from "@/lib/db";
 import { ConflictError } from "@/lib/errors";
 import { publishRealtimeEvent } from "@/lib/realtime";
 import { recordAudit } from "@/services/audit.service";
+
 const schema = z.object({ action: z.enum(["dispatch", "deliver", "cancel"]) });
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) { try { const user = await requirePermission("delivery.manage"); const { id } = await context.params; const { action } = schema.parse(await readJson(request)); const order = await db.$transaction(async tx => { const before = await tx.order.findUniqueOrThrow({ where: { id }, include: { delivery: true } }); if (action === "dispatch") { if (before.status !== "READY" || !before.delivery) throw new ConflictError("El pedido debe estar listo antes de salir a reparto."); await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "ON_THE_WAY" } }); } else if (action === "deliver") { if (!(["READY", "DELIVERED"] as string[]).includes(before.status)) throw new ConflictError("El pedido aún no está listo."); await tx.order.update({ where: { id }, data: { status: "DELIVERED", deliveredAt: new Date() } }); if (before.delivery) await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "DELIVERED", deliveredAt: new Date() } }); } else { if (before.status === "PAID") throw new ConflictError("No puedes cancelar un pedido pagado."); await tx.order.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date() } }); if (before.delivery) await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "CANCELLED" } }); } await recordAudit(tx, { userId: user.id, action: `EXTERNAL_ORDER_${action.toUpperCase()}`, module: "delivery", entity: "Order", entityId: id, before: { status: before.status }, after: { action } }); return tx.order.findUniqueOrThrow({ where: { id }, include: { items: true, delivery: true } }); }); await publishRealtimeEvent({ resource: "orders", action: "status_changed", id }); return ok(order); } catch (error) { return handleApiError(error); } }
+
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await requirePermission("delivery.manage");
+    const { id } = await context.params;
+    const { action } = schema.parse(await readJson(request));
+    const order = await db.$transaction(async tx => {
+      const before = await tx.order.findUniqueOrThrow({ where: { id }, include: { delivery: true } });
+      if (action === "dispatch") {
+        if (before.status !== "READY" || !before.delivery) throw new ConflictError("El pedido debe estar listo antes de salir a reparto.");
+        await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "ON_THE_WAY" } });
+      } else if (action === "deliver") {
+        if (!(["READY", "DELIVERED"] as string[]).includes(before.status)) throw new ConflictError("El pedido aún no está listo.");
+        await tx.order.update({ where: { id }, data: { status: "DELIVERED", deliveredAt: new Date(), version: { increment: 1 } } });
+        if (before.delivery) await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "DELIVERED", deliveredAt: new Date() } });
+      } else {
+        if (before.status === "PAID") throw new ConflictError("No puedes cancelar un pedido pagado.");
+        await tx.order.update({ where: { id }, data: { status: "CANCELLED", cancelledAt: new Date(), version: { increment: 1 } } });
+        if (before.delivery) {
+          await tx.deliveryOrder.update({ where: { orderId: id }, data: { status: "CANCELLED" } });
+          await tx.deliveryConsent.deleteMany({ where: { deliveryOrderId: before.delivery.id } });
+        }
+      }
+      if (action !== "dispatch") {
+        await tx.orderStatusHistory.create({ data: { orderId: id, actorId: user.id, fromStatus: before.status, toStatus: action === "deliver" ? "DELIVERED" : "CANCELLED" } });
+      }
+      await recordAudit(tx, { userId: user.id, action: `EXTERNAL_ORDER_${action.toUpperCase()}`, module: "delivery", entity: "Order", entityId: id, before: { status: before.status }, after: { action } });
+      return tx.order.findUniqueOrThrow({ where: { id }, include: { items: true, delivery: true } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    await publishRealtimeEvent({ resource: "orders", action: "status_changed", id });
+    return ok(order);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}

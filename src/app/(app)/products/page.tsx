@@ -1,34 +1,104 @@
 "use client";
-/* Product media is transformed by Cloudinary before these URLs are stored. */
-/* eslint-disable @next/next/no-img-element */
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock3, ImagePlus, MoreHorizontal, PackageCheck, Plus, Search, Sparkles, UploadCloud, Utensils, X } from "lucide-react";
+import { Check, Clock3, MoreHorizontal, Plus, Search, Utensils } from "lucide-react";
 import { toast } from "sonner";
 import { api, money } from "@/lib/client-api";
-import { Badge, Button, EmptyState, Input, Pagination, PageHeader, Skeleton } from "@/components/ui";
+import { Button, EmptyState, Input, Pagination, PageHeader, Skeleton } from "@/components/ui";
+import { cn } from "@/lib/utils";
+import { CreateProductDialog } from "@/components/products/create-product-dialog";
 
 type Product = { id: string; name: string; slug: string; description?: string; price: string; cost: string; imageUrl?: string; imagePublicId?: string; estimatedMinutes?: number; availability: "AVAILABLE" | "LOW_STOCK" | "SOLD_OUT" | "TEMPORARILY_UNAVAILABLE"; category: { id: string; name: string }; station?: { id: string; name: string } };
 type Data = { products: Product[]; categories: Array<{ id: string; name: string }>; stations: Array<{ id: string; name: string }> };
-const availability = [{ id: "AVAILABLE", label: "Disponible", tone: "success" }, { id: "LOW_STOCK", label: "Poco stock", tone: "warning" }, { id: "SOLD_OUT", label: "Agotado", tone: "danger" }, { id: "TEMPORARILY_UNAVAILABLE", label: "No disponible", tone: "neutral" }] as const;
+
+const availability = [
+  { id: "AVAILABLE", label: "Disponible", tone: "neutral" },
+  { id: "LOW_STOCK", label: "Poco stock", tone: "warning" },
+  { id: "SOLD_OUT", label: "Agotado", tone: "danger" },
+  { id: "TEMPORARILY_UNAVAILABLE", label: "No disponible", tone: "neutral" }
+] as const;
 
 export default function ProductsPage() {
-  const client = useQueryClient(); const [search, setSearch] = useState(""); const [category, setCategory] = useState("all"); const [createOpen, setCreateOpen] = useState(false); const [editingAvailability, setEditingAvailability] = useState<string | null>(null); const [page, setPage] = useState(1);
+  const client = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingAvailability, setEditingAvailability] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
   const { data, isLoading } = useQuery({ queryKey: ["products"], queryFn: () => api<Data>("/api/products") });
+
   const filteredProducts = useMemo(() => data?.products.filter(product => (category === "all" || product.category.id === category) && product.name.toLowerCase().includes(search.toLowerCase())) ?? [], [data, search, category]);
   const pageSize = 8;
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const safePage = Math.min(page, totalPages);
   const products = filteredProducts.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const update = useMutation({ mutationFn: ({ id, value }: { id: string; value: string }) => api(`/api/products/${id}`, { method: "PATCH", body: JSON.stringify({ availability: value }) }), onMutate: ({ id, value }) => { client.setQueryData<Data>(["products"], current => current ? { ...current, products: current.products.map(product => product.id === id ? { ...product, availability: value as Product["availability"] } : product) } : current); }, onSuccess: () => { toast.success("Disponibilidad actualizada en todos los dispositivos."); setEditingAvailability(null); }, onError: error => { toast.error(error.message); void client.invalidateQueries({ queryKey: ["products"] }); } });
-  if (isLoading) return <div><PageHeader title="Productos y menú"/><div className="product-admin-grid">{Array.from({ length: 8 }).map((_, i) => <Skeleton className="h-80 rounded-3xl" key={i}/>)}</div></div>;
-  return <div className="page-stack"><PageHeader eyebrow="MENÚ CENTRAL" title="Productos y menú" description="Precios y disponibilidad sincronizados al instante." action={<Button onClick={() => setCreateOpen(true)}><Plus/> Nuevo producto</Button>}/><section className="catalog-summary"><div><PackageCheck/><span><strong>{data?.products.filter(p => p.availability === "AVAILABLE").length}</strong> disponibles</span></div><div><Clock3/><span><strong>{data?.products.filter(p => p.availability === "LOW_STOCK").length}</strong> con poco stock</span></div><div><Utensils/><span><strong>{data?.products.filter(p => p.availability === "SOLD_OUT").length}</strong> agotados</span></div><p><Sparkles/> Los cambios aparecen en salón y menú QR sin recargar.</p></section><div className="catalog-toolbar"><div className="search-field"><Search/><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar producto..."/></div><div className="category-pills"><button className={category === "all" ? "active" : ""} onClick={() => { setCategory("all"); setPage(1); }}>Todos</button>{data?.categories.map(item => <button key={item.id} className={category === item.id ? "active" : ""} onClick={() => { setCategory(item.id); setPage(1); }}>{item.name}</button>)}</div></div><section className="product-admin-grid">{products.map(product => { const state = availability.find(item => item.id === product.availability)!; return <article key={product.id}><div className="admin-product-image">{product.imageUrl ? <img src={product.imageUrl} alt=""/> : <Utensils/>}<Badge tone={state.tone}>{state.label}</Badge><button><MoreHorizontal/></button></div><div className="admin-product-body"><span>{product.category.name} · {product.station?.name ?? "Sin estación"}</span><h3>{product.name}</h3><p>{product.description}</p><div><strong>{money(product.price)}</strong><small><Clock3/> {product.estimatedMinutes ?? 10} min</small></div><button className="availability-button" onClick={() => setEditingAvailability(editingAvailability === product.id ? null : product.id)}><i className={`state-${product.availability.toLowerCase()}`}/>{state.label}<MoreHorizontal/></button>{editingAvailability === product.id && <div className="availability-menu">{availability.map(item => <button key={item.id} onClick={() => update.mutate({ id: product.id, value: item.id })}><i className={`state-${item.id.toLowerCase()}`}/><span>{item.label}</span>{product.availability === item.id && <Check/>}</button>)}</div>}</div></article>; })}</section><Pagination page={safePage} totalPages={totalPages} totalItems={filteredProducts.length} pageSize={pageSize} onPageChange={setPage}/>{!filteredProducts.length && <EmptyState icon={<Utensils/>} title="Sin resultados" detail="Prueba con otra categoría o término."/>}{createOpen && data && <CreateProduct data={data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); void client.invalidateQueries({ queryKey: ["products"] }); }}/>}</div>;
-}
 
-function CreateProduct({ data, onClose, onCreated }: { data: Data; onClose: () => void; onCreated: () => void }) {
-  const [form, setForm] = useState({ name: "", price: 0, cost: 0, estimatedMinutes: 15, categoryId: data.categories[0]?.id ?? "", stationId: data.stations[0]?.id ?? "", description: "", imageUrl: "", imagePublicId: "" }); const [uploading, setUploading] = useState(false);
-  const create = useMutation({ mutationFn: () => api("/api/products", { method: "POST", body: JSON.stringify({ ...form, slug: form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""), imageUrl: form.imageUrl || undefined, imagePublicId: form.imagePublicId || undefined }) }), onSuccess: () => { toast.success("Producto creado y publicado."); onCreated(); }, onError: error => toast.error(error.message) });
-  const upload = async (file: File) => { setUploading(true); try { const signature = await api<{ cloudName: string; apiKey: string; timestamp: number; folder: string; signature: string }>("/api/storage/signature", { method: "POST", body: JSON.stringify({ folder: "products" }) }); const body = new FormData(); body.append("file", file); body.append("api_key", signature.apiKey); body.append("timestamp", String(signature.timestamp)); body.append("folder", signature.folder); body.append("signature", signature.signature); const response = await fetch(`https://api.cloudinary.com/v1_1/${signature.cloudName}/image/upload`, { method: "POST", body }); if (!response.ok) throw new Error("No pudimos subir la imagen."); const result = await response.json() as { secure_url: string; public_id: string }; setForm(current => ({ ...current, imageUrl: result.secure_url, imagePublicId: result.public_id })); toast.success("Imagen lista."); } catch (error) { toast.error(error instanceof Error ? error.message : "No pudimos subir la imagen."); } finally { setUploading(false); } };
-  return <div className="dialog-backdrop"><form className="product-dialog" onSubmit={e => { e.preventDefault(); create.mutate(); }}><header><div><p className="eyebrow">NUEVO PRODUCTO</p><h2>Agrega un plato al menú</h2></div><button type="button" className="icon-button" onClick={onClose}><X/></button></header><div className="product-form-grid"><label className="upload-zone">{form.imageUrl ? <img src={form.imageUrl} alt="Vista previa"/> : <><UploadCloud/><strong>{uploading ? "Subiendo..." : "Arrastra o selecciona una foto"}</strong><span>JPG, PNG o WebP</span></>}<input type="file" accept="image/*" disabled={uploading} onChange={e => e.target.files?.[0] && void upload(e.target.files[0])}/></label><div className="form-fields"><label>Nombre<Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ej. Lomo saltado" required/></label><label>Descripción<textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="Descripción breve y apetecible"/></label><div className="two-fields"><label>Precio (S/)<Input type="number" min="0.1" step="0.1" value={form.price} onChange={e => setForm({ ...form, price: Number(e.target.value) })} required/></label><label>Costo (S/)<Input type="number" min="0" step="0.1" value={form.cost} onChange={e => setForm({ ...form, cost: Number(e.target.value) })}/></label></div><div className="two-fields"><label>Categoría<select value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>{data.categories.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label><label>Estación<select value={form.stationId} onChange={e => setForm({ ...form, stationId: e.target.value })}>{data.stations.map(item => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label></div><label>Tiempo estimado (min)<Input type="number" min="1" value={form.estimatedMinutes} onChange={e => setForm({ ...form, estimatedMinutes: Number(e.target.value) })}/></label></div></div><footer><Button type="button" variant="secondary" onClick={onClose}>Cancelar</Button><Button type="submit" loading={create.isPending}><ImagePlus/> Crear producto</Button></footer></form></div>;
+  const update = useMutation({
+    mutationFn: ({ id, value }: { id: string; value: string }) => api(`/api/products/${id}`, { method: "PATCH", body: JSON.stringify({ availability: value }) }),
+    onMutate: ({ id, value }) => client.setQueryData<Data>(["products"], current => current ? { ...current, products: current.products.map(product => product.id === id ? { ...product, availability: value as Product["availability"] } : product) } : current),
+    onSuccess: () => { toast.success("Disponibilidad actualizada."); setEditingAvailability(null); },
+    onError: error => { toast.error(error.message); void client.invalidateQueries({ queryKey: ["products"] }); }
+  });
+
+  if (isLoading) return <div className="space-y-4"><PageHeader title="Productos y menú" /><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="h-64 rounded-xl" />)}</div></div>;
+
+  return (
+    <div className="space-y-4">
+      <PageHeader eyebrow="MENÚ" title="Productos y menú" description="Precios, categorías y disponibilidad." action={<Button onClick={() => setCreateOpen(true)} className="h-9 gap-2 rounded-lg px-3 text-sm"><Plus size={15} />Nuevo producto</Button>} />
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+        <span><strong className="mr-1 text-neutral-900 dark:text-white">{data?.products.filter(product => product.availability === "AVAILABLE").length}</strong> disponibles</span>
+        <span><strong className="mr-1 text-neutral-900 dark:text-white">{data?.products.filter(product => product.availability === "LOW_STOCK").length}</strong> poco stock</span>
+        <span><strong className="mr-1 text-neutral-900 dark:text-white">{data?.products.filter(product => product.availability === "SOLD_OUT").length}</strong> agotados</span>
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="relative w-full max-w-sm"><Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar producto..." className="h-9 rounded-lg pl-9 text-sm" /></div>
+        <div className="flex gap-1 overflow-x-auto">
+          <button type="button" onClick={() => { setCategory("all"); setPage(1); }} className={cn("h-8 shrink-0 rounded-md px-3 text-xs font-medium transition", category === "all" ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900" : "text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800")}>Todos</button>
+          {data?.categories.map(item => <button type="button" key={item.id} onClick={() => { setCategory(item.id); setPage(1); }} className={cn("h-8 shrink-0 rounded-md px-3 text-xs font-medium transition", category === item.id ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-900" : "text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800")}>{item.name}</button>)}
+        </div>
+        <span className="ml-auto hidden text-xs text-neutral-400 xl:block">{filteredProducts.length} productos</span>
+      </div>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {products.map(product => {
+          const state = availability.find(item => item.id === product.availability)!;
+          return (
+            <article key={product.id} className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="relative h-36 bg-neutral-100 dark:bg-neutral-800">
+                {product.imageUrl ? <Image src={product.imageUrl} alt={product.name} fill sizes="(max-width: 640px) 100vw, (max-width: 1280px) 33vw, 260px" className="object-cover" /> : <div className="flex h-full items-center justify-center text-neutral-300 dark:text-neutral-600"><Utensils size={30} /></div>}
+                <button type="button" className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/90 text-neutral-500 dark:bg-neutral-900/90 dark:text-neutral-400"><MoreHorizontal size={15} /></button>
+              </div>
+
+              <div className="p-3">
+                <span className="block truncate text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400">{product.category.name} · {product.station?.name ?? "Sin estación"}</span>
+                <h3 className="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-white">{product.name}</h3>
+                <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-neutral-500 dark:text-neutral-400">{product.description || "Sin descripción"}</p>
+
+                <div className="mt-3 flex items-center justify-between"><strong className="text-base font-semibold text-neutral-900 dark:text-white">{money(product.price)}</strong><span className="flex items-center gap-1 text-xs text-neutral-400"><Clock3 size={12} />{product.estimatedMinutes ?? 10} min</span></div>
+
+                <div className="relative mt-3">
+                  <button type="button" onClick={() => setEditingAvailability(editingAvailability === product.id ? null : product.id)} className="flex h-8 w-full items-center gap-2 rounded-lg border border-neutral-200 px-2.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-800">
+                    <span className={cn("h-1.5 w-1.5 rounded-full", product.availability === "SOLD_OUT" ? "bg-red-500" : product.availability === "LOW_STOCK" ? "bg-amber-500" : "bg-neutral-400")} />
+                    {state.label}
+                    <MoreHorizontal size={13} className="ml-auto" />
+                  </button>
+
+                  {editingAvailability === product.id && <div className="absolute bottom-10 left-0 z-30 w-full overflow-hidden rounded-lg border border-neutral-200 bg-white p-1 dark:border-neutral-800 dark:bg-neutral-900">{availability.map(item => <button type="button" key={item.id} onClick={() => update.mutate({ id: product.id, value: item.id })} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs hover:bg-neutral-100 dark:hover:bg-neutral-800"><span className={cn("h-1.5 w-1.5 rounded-full", item.id === "SOLD_OUT" ? "bg-red-500" : item.id === "LOW_STOCK" ? "bg-amber-500" : "bg-neutral-400")} /><span className="flex-1">{item.label}</span>{product.availability === item.id && <Check size={13} className="text-neutral-500" />}</button>)}</div>}
+                </div>
+              </div>
+            </article>
+          );
+        })}
+      </section>
+
+      {!!filteredProducts.length && <div className="border-t border-neutral-200 pt-2 dark:border-neutral-800"><Pagination page={safePage} totalPages={totalPages} totalItems={filteredProducts.length} pageSize={pageSize} onPageChange={setPage} /></div>}
+      {!filteredProducts.length && <EmptyState icon={<Utensils />} title="Sin resultados" detail="Prueba con otra categoría o término." />}
+      {createOpen && data && <CreateProductDialog data={data} onClose={() => setCreateOpen(false)} onCreated={() => { setCreateOpen(false); void client.invalidateQueries({ queryKey: ["products"] }); }} />}
+    </div>
+  );
 }

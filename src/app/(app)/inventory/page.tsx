@@ -2,14 +2,10 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Boxes, PackageOpen, PencilLine, Search } from "lucide-react";
+import { ArrowDownRight, ArrowUpRight, Boxes, PencilLine, Search } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/client-api";
-import {
-  Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-  EmptyState, Input, NativeSelect, Pagination, PageHeader, Skeleton, Table, TableBody, TableCell,
-  TableHead, TableHeader, TableRow, Textarea
-} from "@/components/ui";
+import { Badge, Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, EmptyState, Input, NativeSelect, Pagination, PageHeader, Skeleton, StatCard, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Textarea } from "@/components/ui";
 
 type Ingredient = { id: string; name: string; unit: string; stock: string; minStock?: string; averageCost: string; movements: Array<{ id: string; type: string; quantity: string; createdAt: string }> };
 
@@ -23,9 +19,10 @@ export default function InventoryPage() {
   const [page, setPage] = useState(1);
 
   const { data = [], isLoading } = useQuery({ queryKey: ["inventory"], queryFn: () => api<Ingredient[]>("/api/inventory") });
+
   const mutation = useMutation({
     mutationFn: () => api("/api/inventory", { method: "POST", body: JSON.stringify({ ingredientId: selected!.id, quantity, type, reason, idempotencyKey: crypto.randomUUID() }) }),
-    onSuccess: () => { toast.success("Stock actualizado y auditado."); setSelected(null); void client.invalidateQueries({ queryKey: ["inventory"] }); },
+    onSuccess: () => { toast.success("Stock actualizado y auditado."); setSelected(null); setQuantity(0); setReason(""); void client.invalidateQueries({ queryKey: ["inventory"] }); },
     onError: error => toast.error(error.message)
   });
 
@@ -37,66 +34,79 @@ export default function InventoryPage() {
   const safePage = Math.min(page, totalPages);
   const visible = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  if (isLoading) return <div><PageHeader title="Inventario"/><Skeleton className="h-[500px] rounded-xl"/></div>;
+  const openMovement = (item: Ingredient) => { setSelected(item); setQuantity(0); setType("PURCHASE"); setReason(""); };
 
-  return <div className="page-stack">
-    <PageHeader eyebrow="CONTROL DE INSUMOS" title="Inventario" description="Stock, alertas y movimientos en una sola vista." action={<Button onClick={() => data[0] && setSelected(data[0])}><PencilLine/> Registrar movimiento</Button>}/>
-    <section className="inventory-summary">
-      <article><span><Boxes/></span><div><small>INSUMOS ACTIVOS</small><strong>{data.length}</strong></div></article>
-      <article><span className="warn"><AlertTriangle/></span><div><small>BAJO MÍNIMO</small><strong>{low.length}</strong></div></article>
-      <article><span className="green"><PackageOpen/></span><div><small>VALOR ESTIMADO</small><strong>S/ {value.toFixed(2)}</strong></div></article>
-    </section>
+  if (isLoading) return <div className="space-y-4"><PageHeader title="Inventario" /><Skeleton className="h-[500px] rounded-xl" /></div>;
 
-    <div className="search-field inventory-search"><Search/><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar ingrediente..."/></div>
+  return (
+    <div className="space-y-4">
+      <PageHeader eyebrow="CONTROL DE INSUMOS" title="Inventario" description="Stock, alertas y movimientos." action={<Button onClick={() => data[0] && openMovement(data[0])} disabled={!data.length} className="h-9 gap-2 rounded-lg px-3 text-sm"><PencilLine size={15} />Registrar movimiento</Button>} />
 
-    <section className="panel overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Ingrediente</TableHead>
-            <TableHead>Stock actual</TableHead>
-            <TableHead>Stock mínimo</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Último movimiento</TableHead>
-            <TableHead className="w-12"/>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {visible.map(item => {
-            const isLow = Boolean(item.minStock && Number(item.stock) <= Number(item.minStock));
-            const last = item.movements[0];
-            return <TableRow key={item.id} className="cursor-pointer" onClick={() => { setSelected(item); setQuantity(0); setReason(""); }}>
-              <TableCell><span className="ingredient-name"><i>{item.name[0]}</i><strong>{item.name}</strong></span></TableCell>
-              <TableCell><strong>{Number(item.stock).toFixed(2)}</strong> {item.unit}</TableCell>
-              <TableCell>{item.minStock ? `${Number(item.minStock).toFixed(2)} ${item.unit}` : "—"}</TableCell>
-              <TableCell><Badge tone={isLow ? "danger" : "success"}>{isLow ? "Reponer" : "Correcto"}</Badge></TableCell>
-              <TableCell>{last ? <span className="flex items-center gap-2"><i className={Number(last.quantity) >= 0 ? "movement-in" : "movement-out"}>{Number(last.quantity) >= 0 ? <ArrowUpRight/> : <ArrowDownRight/>}</i>{last.type.replaceAll("_", " ")}</span> : "Sin movimientos"}</TableCell>
-              <TableCell><PencilLine className="size-4 text-muted-foreground"/></TableCell>
-            </TableRow>;
-          })}
-        </TableBody>
-      </Table>
-      <Pagination className="px-4" page={safePage} totalPages={totalPages} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage}/>
-    </section>
+      <section className="grid gap-3 sm:grid-cols-3">
+        <StatCard label="Insumos activos" value={String(data.length)} />
+        <StatCard label="Bajo mínimo" value={String(low.length)} warning={low.length > 0} />
+        <StatCard label="Valor estimado" value={`S/ ${value.toFixed(2)}`} />
+      </section>
 
-    {!data.length && <EmptyState icon={<Boxes/>} title="Inventario vacío" detail="Agrega ingredientes para comenzar el control."/>}
+      <div className="flex items-center justify-between gap-3">
+        <div className="relative w-full max-w-sm"><Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400" /><Input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Buscar ingrediente..." className="h-9 rounded-lg pl-9 text-sm" /></div>
+        <span className="hidden text-xs text-neutral-400 sm:block">{filtered.length} insumos</span>
+      </div>
 
-    <Dialog open={Boolean(selected)} onOpenChange={open => !open && setSelected(null)}>
-      <DialogContent className="max-w-md">
-        {selected && <>
-          <DialogHeader>
-            <p className="eyebrow">MOVIMIENTO DE INVENTARIO</p>
-            <DialogTitle>{selected.name}</DialogTitle>
-            <DialogDescription>Stock actual: {Number(selected.stock).toFixed(2)} {selected.unit}</DialogDescription>
-          </DialogHeader>
-          <form className="grid gap-4" onSubmit={e => { e.preventDefault(); mutation.mutate(); }}>
-            <label>Tipo<NativeSelect value={type} onChange={e => setType(e.target.value)}><option value="PURCHASE">Ingreso / compra</option><option value="ADJUSTMENT">Ajuste</option><option value="LOSS">Pérdida</option><option value="DAMAGE">Deterioro</option><option value="EXPIRATION">Vencimiento</option></NativeSelect></label>
-            <label>Cantidad ({selected.unit})<Input type="number" step="0.001" min="0.001" value={quantity} onChange={e => setQuantity(Number(e.target.value))} required/></label>
-            <label>Motivo<Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Ej. Compra semanal a proveedor" required/></label>
-            <Button type="submit" loading={mutation.isPending}>Registrar movimiento</Button>
-          </form>
-        </>}
-      </DialogContent>
-    </Dialog>
-  </div>;
+      {data.length ? (
+        <section className="overflow-hidden rounded-xl border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-neutral-50 dark:bg-neutral-950/50">
+                  <TableHead className="h-10 text-xs font-semibold">Ingrediente</TableHead>
+                  <TableHead className="h-10 text-xs font-semibold">Stock actual</TableHead>
+                  <TableHead className="h-10 text-xs font-semibold">Stock mínimo</TableHead>
+                  <TableHead className="h-10 text-xs font-semibold">Estado</TableHead>
+                  <TableHead className="h-10 text-xs font-semibold">Último movimiento</TableHead>
+                  <TableHead className="h-10 w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visible.map(item => {
+                  const isLow = Boolean(item.minStock && Number(item.stock) <= Number(item.minStock));
+                  const last = item.movements[0];
+                  const incoming = last ? Number(last.quantity) >= 0 : false;
+                  return (
+                    <TableRow key={item.id} onClick={() => openMovement(item)} className="cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800/40">
+                      <TableCell className="py-2.5"><strong className="text-sm font-medium text-neutral-900 dark:text-white">{item.name}</strong></TableCell>
+                      <TableCell className="py-2.5"><span className="text-sm font-semibold text-neutral-900 dark:text-white">{Number(item.stock).toFixed(2)}</span><span className="ml-1 text-xs text-neutral-400">{item.unit}</span></TableCell>
+                      <TableCell className="py-2.5 text-sm text-neutral-500 dark:text-neutral-400">{item.minStock ? `${Number(item.minStock).toFixed(2)} ${item.unit}` : "—"}</TableCell>
+                      <TableCell className="py-2.5"><Badge tone={isLow ? "danger" : "neutral"} className="rounded-md px-2 py-0 text-[10px]">{isLow ? "Reponer" : "Correcto"}</Badge></TableCell>
+                      <TableCell className="py-2.5">
+                        {last ? <div className="flex items-center gap-2">{incoming ? <ArrowUpRight size={14} className="text-neutral-400" /> : <ArrowDownRight size={14} className="text-neutral-400" />}<div><span className="block text-xs font-medium capitalize text-neutral-700 dark:text-neutral-200">{last.type.replaceAll("_", " ").toLowerCase()}</span><span className="text-[11px] text-neutral-400">{incoming ? "+" : ""}{Number(last.quantity).toFixed(2)} {item.unit}</span></div></div> : <span className="text-xs text-neutral-400">Sin movimientos</span>}
+                      </TableCell>
+                      <TableCell className="py-2.5"><PencilLine size={14} className="text-neutral-400" /></TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <div className="border-t border-neutral-200 px-3 py-2 dark:border-neutral-800"><Pagination page={safePage} totalPages={totalPages} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} /></div>
+        </section>
+      ) : <EmptyState icon={<Boxes />} title="Inventario vacío" detail="Agrega ingredientes para comenzar el control." />}
+
+      {data.length > 0 && !visible.length && <EmptyState icon={<Search />} title="Sin resultados" detail="No encontramos ingredientes con ese nombre." />}
+
+      <Dialog open={Boolean(selected)} onOpenChange={open => !open && setSelected(null)}>
+        <DialogContent className="max-w-sm rounded-xl p-4">
+          {selected && <>
+            <DialogHeader className="space-y-1"><span className="text-[10px] font-medium uppercase tracking-[0.14em] text-neutral-400">Movimiento de inventario</span><DialogTitle className="text-lg">{selected.name}</DialogTitle><DialogDescription>Stock actual: {Number(selected.stock).toFixed(2)} {selected.unit}</DialogDescription></DialogHeader>
+            <form className="mt-2 grid gap-3" onSubmit={e => { e.preventDefault(); mutation.mutate(); }}>
+              <label className="text-sm"><span className="mb-1 block font-medium">Tipo</span><NativeSelect value={type} onChange={e => setType(e.target.value)} className="h-9 rounded-lg"><option value="PURCHASE">Ingreso / compra</option><option value="ADJUSTMENT">Ajuste</option><option value="LOSS">Pérdida</option><option value="DAMAGE">Deterioro</option><option value="EXPIRATION">Vencimiento</option></NativeSelect></label>
+              <label className="text-sm"><span className="mb-1 block font-medium">Cantidad ({selected.unit})</span><Input type="number" step="0.001" min="0.001" value={quantity || ""} onChange={e => setQuantity(Number(e.target.value))} required className="h-9 rounded-lg" /></label>
+              <label className="text-sm"><span className="mb-1 block font-medium">Motivo</span><Textarea value={reason} onChange={e => setReason(e.target.value)} placeholder="Ej. Compra semanal a proveedor" required className="min-h-20 resize-none rounded-lg" /></label>
+              <Button type="submit" loading={mutation.isPending} className="h-9 rounded-lg text-sm">Registrar movimiento</Button>
+            </form>
+          </>}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

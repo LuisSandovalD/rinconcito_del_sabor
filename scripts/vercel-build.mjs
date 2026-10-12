@@ -2,6 +2,8 @@ import "dotenv/config";
 import { spawnSync } from "node:child_process";
 import { resolveMigrationUrl } from "./lib/migration-url.mjs";
 
+process.env.NODE_ENV = "production";
+
 function run(command, args) {
   const result = spawnSync(command, args, { stdio: "inherit", shell: process.platform === "win32" });
   if (result.status !== 0) process.exit(result.status ?? 1);
@@ -14,8 +16,18 @@ function sleep(milliseconds) {
 function runMigrationWithRetry(command, args) {
   const delays = [5_000, 10_000, 15_000, 20_000, 30_000];
   for (let attempt = 0; attempt <= delays.length; attempt += 1) {
-    const result = spawnSync(command, args, { stdio: "inherit", shell: process.platform === "win32", env: process.env });
+    const result = spawnSync(command, args, {
+      encoding: "utf8",
+      env: process.env,
+      maxBuffer: 10 * 1024 * 1024,
+      shell: process.platform === "win32"
+    });
+    if (result.stdout) process.stdout.write(result.stdout);
+    if (result.stderr) process.stderr.write(result.stderr);
     if (result.status === 0) return;
+    const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+    const lockTimeout = /P1002|advisory lock|pg_advisory_lock/i.test(output);
+    if (!lockTimeout) process.exit(result.status ?? 1);
     if (attempt === delays.length) process.exit(result.status ?? 1);
     const wait = delays[attempt];
     console.warn(`[vercel-build] Prisma Migrate no obtuvo el bloqueo. Reintento ${attempt + 2}/${delays.length + 1} en ${wait / 1000}s...`);

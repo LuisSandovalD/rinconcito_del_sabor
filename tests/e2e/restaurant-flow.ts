@@ -12,7 +12,13 @@ async function request<T>(path: string, init: RequestInit = {}) {
     ...init,
     headers: { "content-type": "application/json", origin: baseUrl, ...(cookie ? { cookie } : {}), ...init.headers }
   });
-  if (path === "/api/auth/unified-login") cookie = response.headers.get("set-cookie")?.split(";")[0] ?? "";
+  if (path === "/api/auth/unified-login") {
+    const sessionCookie = response.headers
+      .getSetCookie()
+      .map(value => value.split(";", 1)[0])
+      .find(value => /^(?:__Host-)?rinconcito_session=/.test(value));
+    cookie = sessionCookie ?? "";
+  }
   const body = await response.json() as JsonResult<T>;
   if (!response.ok) throw new Error(`${path}: ${body.error ?? response.status}`);
   return body.data;

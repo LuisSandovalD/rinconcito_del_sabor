@@ -2,7 +2,15 @@ type LogLevel = "info" | "warn" | "error";
 
 const REDACTED_KEYS = /password|secret|token|authorization|api[_-]?key/i;
 
+function sanitizeString(value: string) {
+  return value
+    .replace(/\b(Bearer\s+)[A-Za-z0-9._~+/=-]+/gi, "$1[REDACTED]")
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^@\s/]+@/gi, "$1[REDACTED]@")
+    .replace(/(\b(?:password|secret|token|api[_-]?key)=)[^\s&,;]+/gi, "$1[REDACTED]");
+}
+
 function sanitize(value: unknown): unknown {
+  if (typeof value === "string") return sanitizeString(value);
   if (Array.isArray(value)) return value.map(sanitize);
   if (value && typeof value === "object") {
     return Object.fromEntries(

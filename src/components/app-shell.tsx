@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Archive, BarChart3, Bell, Bike, ChefHat, ChevronLeft, CircleDollarSign, ClipboardList, Command, LayoutDashboard, LogOut, Menu, PackageOpen, Search, Settings, TableProperties, UsersRound, UtensilsCrossed, X } from "lucide-react";
+import { Archive, BarChart3, Bike, ChefHat, ChevronLeft, CircleDollarSign, ClipboardList, Command, LayoutDashboard, LogOut, Menu, PackageOpen, Search, Settings, TableProperties, UsersRound, UtensilsCrossed, X } from "lucide-react";
 import { api } from "@/lib/client-api";
 import { cn } from "@/lib/utils";
 import { useConnection } from "@/components/providers";
@@ -118,7 +118,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-1">
             <span className="hidden items-center gap-1.5 text-xs text-neutral-400 sm:flex"><span className={cn("h-1.5 w-1.5 rounded-full", connection === "connected" ? "bg-emerald-500" : connection === "offline" ? "bg-red-500" : "bg-amber-500")} />{connectionLabel}</span>
             <ThemeSwitcher />
-            <button type="button" aria-label="Notificaciones" className="flex h-8 w-8 items-center justify-center rounded-md text-neutral-400 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-900 dark:hover:text-white"><Bell size={16} /></button>
           </div>
         </header>
 
